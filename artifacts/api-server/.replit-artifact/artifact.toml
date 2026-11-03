@@ -7,7 +7,7 @@ id = "3B4_FFSkEVBkAeYMFRJ2e"
 [[services]]
 localPort = 8080
 name = "API Server"
-paths = ["/api"]
+paths = ["/api/__clerk"]
 
 [services.development]
 run = "pnpm --filter @workspace/api-server run dev"
@@ -27,6 +27,27 @@ args = ["node", "--enable-source-maps", "artifacts/api-server/dist/index.mjs"]
 [services.production.run.env]
 PORT = "8080"
 NODE_ENV = "production"
+
+
+
+[[services]]
+localPort = 8082
+name = "MyGym FastAPI"
+paths = ["/api"]
+
+[services.development]
+run = "uv run uvicorn backend.app.main:app --app-dir ../.. --host 0.0.0.0 --port $PORT"
+
+[services.production]
+
+[services.production.build]
+args = ["uv", "sync", "--no-dev"]
+
+[services.production.run]
+args = ["uv", "run", "uvicorn", "backend.app.main:app", "--app-dir", "../..", "--host", "0.0.0.0", "--port", "8082"]
+
+[services.production.run.env]
+PORT = "8082"
 
 [services.production.health.startup]
 path = "/api/healthz"

@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "MyGym Fitness KE"
+description = "A gym operations and member engagement app for a single gym in Kenya, covering member records, subscriptions, attendance, fitness plans, events, and staff workflows."
+version = "1.0.0"
+id = "artifacts/mygym-fitness-ke"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21390
+
+[services.development]
+run = "pnpm --filter @workspace/mygym-fitness-ke run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/mygym-fitness-ke", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/mygym-fitness-ke/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21390"
+BASE_PATH = "/"

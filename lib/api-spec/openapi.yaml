@@ -10,6 +10,10 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: staff
+    description: Authenticated staff identity
+  - name: settings
+    description: Owner-managed gym settings
 paths:
   /healthz:
     get:
@@ -24,7 +28,140 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /staff/me:
+    get:
+      operationId: getCurrentStaff
+      tags: [staff]
+      summary: Get the signed-in staff profile
+      security:
+        - clerkSession: []
+      responses:
+        "200":
+          description: Staff profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentStaff"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: No staff role has been assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /staff/bootstrap-owner:
+    post:
+      operationId: bootstrapInitialOwner
+      tags: [staff]
+      summary: Bootstrap the configured first owner
+      description: Grants the owner role only to the authenticated Clerk account matching INITIAL_OWNER_EMAIL when no staff users exist.
+      security:
+        - clerkSession: []
+      responses:
+        "200":
+          description: Owner staff profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentStaff"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Account is not the configured initial owner
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Owner bootstrap has already been completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "503":
+          description: Owner bootstrap is not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /gym-settings:
+    get:
+      operationId: getGymSettings
+      tags: [settings]
+      summary: Get gym settings
+      security:
+        - clerkSession: []
+      responses:
+        "200":
+          description: Current gym settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GymSettings"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Staff access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    patch:
+      operationId: updateGymSettings
+      tags: [settings]
+      summary: Update gym settings
+      security:
+        - clerkSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GymSettingsUpdate"
+      responses:
+        "200":
+          description: Updated gym settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GymSettings"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Owner access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "422":
+          description: Invalid settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
 components:
+  securitySchemes:
+    clerkSession:
+      type: apiKey
+      in: cookie
+      name: __session
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +170,89 @@ components:
           type: string
       required:
         - status
+    CurrentStaff:
+      type: object
+      required: [id, name, email, role, status]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [owner, receptionist, trainer]
+        status:
+          type: string
+          enum: [active, inactive]
+    GymSettings:
+      type: object
+      required:
+        - gymName
+        - timezone
+        - currency
+        - attendanceDuplicateIntervalMinutes
+        - inactivityThresholdDays
+        - renewalReminderDaysBefore
+        - peakAccessHoursConfigured
+        - updatedAt
+      properties:
+        gymName:
+          type: string
+        timezone:
+          type: string
+        currency:
+          type: string
+          enum: [KES]
+        attendanceDuplicateIntervalMinutes:
+          type: integer
+          minimum: 1
+          maximum: 120
+        inactivityThresholdDays:
+          type: integer
+          minimum: 1
+          maximum: 90
+        renewalReminderDaysBefore:
+          type: integer
+          minimum: 1
+          maximum: 30
+        peakAccessHoursConfigured:
+          type: boolean
+        updatedAt:
+          type: string
+          format: date-time
+    GymSettingsUpdate:
+      type: object
+      minProperties: 1
+      properties:
+        gymName:
+          type: string
+          minLength: 2
+          maxLength: 120
+        timezone:
+          type: string
+          minLength: 1
+          maxLength: 80
+        attendanceDuplicateIntervalMinutes:
+          type: integer
+          minimum: 1
+          maximum: 120
+        inactivityThresholdDays:
+          type: integer
+          minimum: 1
+          maximum: 90
+        renewalReminderDaysBefore:
+          type: integer
+          minimum: 1
+          maximum: 30
+    ApiError:
+      type: object
+      required: [error, code]
+      properties:
+        error:
+          type: string
+        code:
+          type: string
 

@@ -277,6 +277,7 @@ export interface MembershipPlan {
 
 export interface SubscriptionInput {
   planId: string;
+  /** Inclusive first access date in the gym's local calendar. */
   startsOn: string;
 }
 
@@ -288,7 +289,9 @@ export interface Subscription {
   planId: string;
   planName: string;
   monthlyPriceKes: number;
+  /** Inclusive first access date in the gym's local calendar. */
   startsOn: string;
+  /** Inclusive final access date; the term ends the day before the same calendar date in the following month, clamped to that month's last day. */
   expiresOn: string;
   status: SubscriptionStatus;
   createdAt: string;

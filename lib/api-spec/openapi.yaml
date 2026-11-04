@@ -596,6 +596,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+        "422":
+          description: Plan is inactive or has no configured access hours
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
   /payments:
     get:
       operationId: listPayments
@@ -1220,6 +1226,7 @@ components:
         startsOn:
           type: string
           format: date
+          description: Inclusive first access date in the gym's local calendar.
     Subscription:
       type: object
       required: [id, memberId, memberName, memberNumber, planId, planName, monthlyPriceKes, startsOn, expiresOn, status, createdAt]
@@ -1244,9 +1251,11 @@ components:
         startsOn:
           type: string
           format: date
+          description: Inclusive first access date in the gym's local calendar.
         expiresOn:
           type: string
           format: date
+          description: Inclusive final access date; the term ends the day before the same calendar date in the following month, clamped to that month's last day.
         status:
           $ref: "#/components/schemas/SubscriptionStatus"
         createdAt:

@@ -15,7 +15,9 @@ export interface Subscription {
   planId: string;
   planName: string;
   monthlyPriceKes: number;
+  /** Inclusive first access date in the gym's local calendar. */
   startsOn: Date;
+  /** Inclusive final access date; the term ends the day before the same calendar date in the following month, clamped to that month's last day. */
   expiresOn: Date;
   status: SubscriptionStatus;
   createdAt: Date;

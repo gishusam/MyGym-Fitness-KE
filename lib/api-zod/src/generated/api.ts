@@ -445,8 +445,8 @@ export const ListSubscriptionsResponse = zod.object({
   "planId": zod.string().uuid(),
   "planName": zod.string(),
   "monthlyPriceKes": zod.number().int(),
-  "startsOn": zod.coerce.date(),
-  "expiresOn": zod.coerce.date(),
+  "startsOn": zod.coerce.date().describe('Inclusive first access date in the gym\'s local calendar.'),
+  "expiresOn": zod.coerce.date().describe('Inclusive final access date; the term ends the day before the same calendar date in the following month, clamped to that month\'s last day.'),
   "status": zod.enum(['scheduled', 'active', 'expired', 'cancelled']),
   "createdAt": zod.coerce.date()
 })),
@@ -466,7 +466,7 @@ export const CreateSubscriptionParams = zod.object({
 
 export const CreateSubscriptionBody = zod.object({
   "planId": zod.string().uuid(),
-  "startsOn": zod.coerce.date()
+  "startsOn": zod.coerce.date().describe('Inclusive first access date in the gym\'s local calendar.')
 })
 
 export const CreateSubscriptionResponse = zod.object({
@@ -477,8 +477,8 @@ export const CreateSubscriptionResponse = zod.object({
   "planId": zod.string().uuid(),
   "planName": zod.string(),
   "monthlyPriceKes": zod.number().int(),
-  "startsOn": zod.coerce.date(),
-  "expiresOn": zod.coerce.date(),
+  "startsOn": zod.coerce.date().describe('Inclusive first access date in the gym\'s local calendar.'),
+  "expiresOn": zod.coerce.date().describe('Inclusive final access date; the term ends the day before the same calendar date in the following month, clamped to that month\'s last day.'),
   "status": zod.enum(['scheduled', 'active', 'expired', 'cancelled']),
   "createdAt": zod.coerce.date()
 })
@@ -643,8 +643,8 @@ export const LookupAttendanceResponse = zod.object({
   "planId": zod.string().uuid(),
   "planName": zod.string(),
   "monthlyPriceKes": zod.number().int(),
-  "startsOn": zod.coerce.date(),
-  "expiresOn": zod.coerce.date(),
+  "startsOn": zod.coerce.date().describe('Inclusive first access date in the gym\'s local calendar.'),
+  "expiresOn": zod.coerce.date().describe('Inclusive final access date; the term ends the day before the same calendar date in the following month, clamped to that month\'s last day.'),
   "status": zod.enum(['scheduled', 'active', 'expired', 'cancelled']),
   "createdAt": zod.coerce.date()
 }),zod.null()]),

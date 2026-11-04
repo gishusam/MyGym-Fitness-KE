@@ -219,7 +219,9 @@ class MembershipPlanResponse(ApiModel):
 
 class SubscriptionInput(ApiModel):
     plan_id: UUID
-    starts_on: date
+    starts_on: date = Field(
+        description="Inclusive first access date in the gym's local calendar."
+    )
 
 
 class SubscriptionResponse(ApiModel):
@@ -230,8 +232,15 @@ class SubscriptionResponse(ApiModel):
     plan_id: UUID
     plan_name: str
     monthly_price_kes: int
-    starts_on: date
-    expires_on: date
+    starts_on: date = Field(
+        description="Inclusive first access date in the gym's local calendar."
+    )
+    expires_on: date = Field(
+        description=(
+            "Inclusive final access date. The term ends the day before the same "
+            "calendar date in the following month, clamped to that month's last day."
+        )
+    )
     status: Literal["scheduled", "active", "expired", "cancelled"]
     created_at: datetime
 

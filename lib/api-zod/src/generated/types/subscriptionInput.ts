@@ -8,5 +8,6 @@
 
 export interface SubscriptionInput {
   planId: string;
+  /** Inclusive first access date in the gym's local calendar. */
   startsOn: Date;
 }

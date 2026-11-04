@@ -4,10 +4,10 @@ import { ClerkProvider, Show, SignIn, SignUp, useClerk } from '@clerk/react';
 import { publishableKeyFromHost } from '@clerk/react/internal';
 import { shadcn } from '@clerk/themes';
 import {
-  Activity, ArrowDownRight, ArrowRight, ArrowUpRight, Check, CheckCircle2,
+  Activity, ArrowDownRight, ArrowRight, ArrowUpRight, Check, CheckCircle2, CreditCard,
   ChevronRight, CircleHelp, Clock3, Dumbbell, ExternalLink, Fingerprint,
   Gauge, LoaderCircle, LogOut, MapPin, Settings2, ShieldCheck, SlidersHorizontal,
-  Sparkles, UsersRound, Wifi, XCircle,
+  QrCode, Sparkles, UsersRound, Wallet, Wifi, XCircle,
 } from 'lucide-react';
 import { Link, Redirect, Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import {
@@ -19,6 +19,7 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
+import { AttendancePage, MembersPage, PaymentsPage, PlansPage, SubscriptionsPage } from '@/pages/operations';
 import './index.css';
 
 const queryClient = new QueryClient();
@@ -175,6 +176,11 @@ function AppShell({ staff, children }: { staff: CurrentStaff; children: ReactNod
         <div className="nav-label">YOUR SPACE</div>
         <nav className="side-nav" aria-label="Main navigation">
           <Link href="/dashboard" className={`nav-item ${location === '/dashboard' ? 'selected' : ''}`} data-testid="link-dashboard"><Gauge size={17} /><span>Overview</span></Link>
+          <Link href="/members" className={`nav-item ${location === '/members' ? 'selected' : ''}`} data-testid="link-members"><UsersRound size={17} /><span>Members</span></Link>
+          <Link href="/membership-plans" className={`nav-item ${location === '/membership-plans' ? 'selected' : ''}`} data-testid="link-membership-plans"><Dumbbell size={17} /><span>Plans</span></Link>
+          <Link href="/subscriptions" className={`nav-item ${location === '/subscriptions' ? 'selected' : ''}`} data-testid="link-subscriptions"><CreditCard size={17} /><span>Subscriptions</span></Link>
+          <Link href="/payments" className={`nav-item ${location === '/payments' ? 'selected' : ''}`} data-testid="link-payments"><Wallet size={17} /><span>Payments</span></Link>
+          <Link href="/attendance" className={`nav-item ${location === '/attendance' ? 'selected' : ''}`} data-testid="link-attendance"><QrCode size={17} /><span>Attendance</span></Link>
           <Link href="/settings/gym" className={`nav-item ${location === '/settings/gym' ? 'selected' : ''}`} data-testid="link-gym-settings"><Settings2 size={17} /><span>Gym settings</span><span className="nav-owner">OWNER</span></Link>
         </nav>
         <div className="sidebar-bottom">
@@ -505,6 +511,11 @@ function RoutedPages() {
     <Route path="/sign-up/*?" component={SignUpPage} />
     <Route path="/dashboard"><Show when="signed-in"><StaffDashboard /></Show><Show when="signed-out"><Redirect to="/" /></Show></Route>
     <Route path="/settings/gym"><Show when="signed-in"><GymSettingsPage /></Show><Show when="signed-out"><Redirect to="/" /></Show></Route>
+    <Route path="/members"><Show when="signed-in"><MembersPage /></Show><Show when="signed-out"><Redirect to="/" /></Show></Route>
+    <Route path="/membership-plans"><Show when="signed-in"><PlansPage /></Show><Show when="signed-out"><Redirect to="/" /></Show></Route>
+    <Route path="/subscriptions"><Show when="signed-in"><SubscriptionsPage /></Show><Show when="signed-out"><Redirect to="/" /></Show></Route>
+    <Route path="/payments"><Show when="signed-in"><PaymentsPage /></Show><Show when="signed-out"><Redirect to="/" /></Show></Route>
+    <Route path="/attendance"><Show when="signed-in"><AttendancePage /></Show><Show when="signed-out"><Redirect to="/" /></Show></Route>
     <Route path="/access-pending"><Show when="signed-in"><AccessPendingPage /></Show><Show when="signed-out"><Redirect to="/" /></Show></Route>
     <Route component={NotFound} />
   </Switch></RoutedErrorBoundary>;

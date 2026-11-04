@@ -125,3 +125,17 @@ def require_owner(staff: StaffUser = Depends(get_current_staff)) -> StaffUser:
             detail={"error": "Owner access is required", "code": "owner_access_required"},
         )
     return staff
+
+
+def require_owner_or_receptionist(
+    staff: StaffUser = Depends(get_current_staff),
+) -> StaffUser:
+    if staff.role not in {StaffRole.OWNER, StaffRole.RECEPTIONIST}:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "Owner or receptionist access is required",
+                "code": "operations_access_required",
+            },
+        )
+    return staff

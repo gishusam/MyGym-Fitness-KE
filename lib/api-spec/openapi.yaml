@@ -14,6 +14,14 @@ tags:
     description: Authenticated staff identity
   - name: settings
     description: Owner-managed gym settings
+  - name: members
+    description: Member records and membership cards
+  - name: memberships
+    description: Membership plans and subscriptions
+  - name: payments
+    description: Staff-recorded payments
+  - name: attendance
+    description: QR and manual attendance workflows
 paths:
   /healthz:
     get:
@@ -156,6 +164,762 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  /members:
+    get:
+      operationId: listMembers
+      tags: [members]
+      summary: Search and paginate members
+      security:
+        - clerkSession: []
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 120
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/MemberStatus"
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Matching members
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberPage"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Owner or receptionist access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    post:
+      operationId: createMember
+      tags: [members]
+      summary: Register a member
+      security:
+        - clerkSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberInput"
+      responses:
+        "201":
+          description: Registered member and membership QR token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberDetail"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Owner or receptionist access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Phone number is already registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /members/{memberId}:
+    parameters:
+      - name: memberId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getMemberDetail
+      tags: [members]
+      summary: View a member profile
+      security:
+        - clerkSession: []
+      responses:
+        "200":
+          description: Member profile and QR token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberDetail"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Owner or receptionist access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Member not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    patch:
+      operationId: updateMember
+      tags: [members]
+      summary: Update a member profile
+      security:
+        - clerkSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberUpdate"
+      responses:
+        "200":
+          description: Updated member profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberDetail"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Owner or receptionist access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Member not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Phone number is already registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /members/{memberId}/qr/rotate:
+    post:
+      operationId: rotateMemberQr
+      tags: [members]
+      summary: Revoke and replace a member QR token
+      security:
+        - clerkSession: []
+      parameters:
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: New revocable QR token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberQr"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Owner or receptionist access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Member not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /membership-plans:
+    get:
+      operationId: listMembershipPlans
+      tags: [memberships]
+      summary: List membership plans
+      security:
+        - clerkSession: []
+      parameters:
+        - name: includeInactive
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Membership plans available to the staff role
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MembershipPlan"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Owner or receptionist access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    post:
+      operationId: createMembershipPlan
+      tags: [memberships]
+      summary: Create a membership plan
+      description: Owner only. Active plans must have at least one explicitly configured access window.
+      security:
+        - clerkSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MembershipPlanInput"
+      responses:
+        "201":
+          description: Created membership plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MembershipPlan"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Owner access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "422":
+          description: Invalid plan or missing hours for an active plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /membership-plans/{planId}:
+    patch:
+      operationId: updateMembershipPlan
+      tags: [memberships]
+      summary: Update a membership plan
+      description: Owner only. A plan cannot be activated without explicit access windows.
+      security:
+        - clerkSession: []
+      parameters:
+        - name: planId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MembershipPlanUpdate"
+      responses:
+        "200":
+          description: Updated membership plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MembershipPlan"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Owner access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Plan not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "422":
+          description: Invalid plan or missing hours for an active plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /subscriptions:
+    get:
+      operationId: listSubscriptions
+      tags: [memberships]
+      summary: List and filter subscriptions
+      security:
+        - clerkSession: []
+      parameters:
+        - name: memberId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/SubscriptionStatus"
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Matching subscriptions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionPage"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Owner or receptionist access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /members/{memberId}/subscriptions:
+    post:
+      operationId: createSubscription
+      tags: [memberships]
+      summary: Start or renew a member subscription
+      description: Creates one calendar month of access and prevents overlapping subscription periods.
+      security:
+        - clerkSession: []
+      parameters:
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscriptionInput"
+      responses:
+        "201":
+          description: Created subscription
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Owner or receptionist access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Member or plan not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Subscription period overlaps an existing one
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /payments:
+    get:
+      operationId: listPayments
+      tags: [payments]
+      summary: View staff-recorded payment history
+      description: Returns payment records only; this is not a revenue-report endpoint.
+      security:
+        - clerkSession: []
+      parameters:
+        - name: memberId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/PaymentStatus"
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Matching payment records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentPage"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Owner or receptionist access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    post:
+      operationId: recordPayment
+      tags: [payments]
+      summary: Record a payment manually
+      description: M-Pesa references are recorded by staff and are not verified with Safaricom.
+      security:
+        - clerkSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentInput"
+      responses:
+        "201":
+          description: Staff-recorded payment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Owner or receptionist access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Member or subscription not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: M-Pesa reference has already been recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /payments/{paymentId}/void:
+    post:
+      operationId: voidPayment
+      tags: [payments]
+      summary: Void a payment while preserving its history
+      security:
+        - clerkSession: []
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentVoidInput"
+      responses:
+        "200":
+          description: Voided payment record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Owner or receptionist access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Payment not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Payment is already voided
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /attendance/lookup:
+    post:
+      operationId: lookupAttendance
+      tags: [attendance]
+      summary: Check access before a staff-confirmed visit
+      description: Scanning or searching never records attendance by itself.
+      security:
+        - clerkSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttendanceLookupInput"
+      responses:
+        "200":
+          description: Member and current access decision
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttendanceReview"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Owner or receptionist access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Member or QR token not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /attendance/check-ins:
+    get:
+      operationId: listCheckIns
+      tags: [attendance]
+      summary: View attendance history
+      security:
+        - clerkSession: []
+      parameters:
+        - name: date
+          in: query
+          description: Local gym date in its configured timezone
+          schema:
+            type: string
+            format: date
+        - name: memberId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Matching check-ins
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckInPage"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Owner or receptionist access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    post:
+      operationId: confirmCheckIn
+      tags: [attendance]
+      summary: Confirm an unrestricted check-in
+      description: Requires explicit staff confirmation and rechecks access, duplicate interval, and current membership on the server.
+      security:
+        - clerkSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckInInput"
+      responses:
+        "201":
+          description: Recorded check-in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckIn"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Owner or receptionist access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Member not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Access restriction or duplicate check-in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /attendance/overrides:
+    post:
+      operationId: overrideCheckIn
+      tags: [attendance]
+      summary: Approve a restricted check-in with a reason
+      description: Access overrides are audited. Duplicate check-ins cannot be overridden.
+      security:
+        - clerkSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckInOverrideInput"
+      responses:
+        "201":
+          description: Overridden check-in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckIn"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Owner or receptionist access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Member not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Check-in is unrestricted or a duplicate
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
 components:
   securitySchemes:
     clerkSession:
@@ -247,6 +1011,469 @@ components:
           type: integer
           minimum: 1
           maximum: 30
+    MemberStatus:
+      type: string
+      enum: [active, inactive]
+    SubscriptionStatus:
+      type: string
+      enum: [scheduled, active, expired, cancelled]
+    PaymentStatus:
+      type: string
+      enum: [recorded, voided]
+    PaymentMethod:
+      type: string
+      enum: [mpesa_manual, cash, bank_transfer]
+    AttendanceRestrictionCode:
+      type: string
+      enum: [member_inactive, no_subscription, expired, plan_inactive, outside_hours, duplicate]
+    CheckInSource:
+      type: string
+      enum: [qr, manual]
+    MemberInput:
+      type: object
+      required: [fullName, phone]
+      properties:
+        fullName:
+          type: string
+          minLength: 2
+          maxLength: 160
+        phone:
+          type: string
+          minLength: 9
+          maxLength: 20
+        email:
+          type: ["string", "null"]
+          format: email
+          maxLength: 320
+    MemberUpdate:
+      type: object
+      minProperties: 1
+      properties:
+        fullName:
+          type: string
+          minLength: 2
+          maxLength: 160
+        phone:
+          type: string
+          minLength: 9
+          maxLength: 20
+        email:
+          type: ["string", "null"]
+          format: email
+          maxLength: 320
+        status:
+          $ref: "#/components/schemas/MemberStatus"
+    MemberSummary:
+      type: object
+      required: [id, memberNumber, fullName, phone, email, status, registeredAt, initials]
+      properties:
+        id:
+          type: string
+          format: uuid
+        memberNumber:
+          type: string
+        fullName:
+          type: string
+        phone:
+          type: string
+        email:
+          type: ["string", "null"]
+          format: email
+        status:
+          $ref: "#/components/schemas/MemberStatus"
+        registeredAt:
+          type: string
+          format: date-time
+        initials:
+          type: string
+    MemberDetail:
+      allOf:
+        - $ref: "#/components/schemas/MemberSummary"
+        - type: object
+          required: [qrToken]
+          properties:
+            qrToken:
+              type: string
+              minLength: 32
+    MemberQr:
+      type: object
+      required: [memberId, memberNumber, qrToken, rotatedAt]
+      properties:
+        memberId:
+          type: string
+          format: uuid
+        memberNumber:
+          type: string
+        qrToken:
+          type: string
+          minLength: 32
+        rotatedAt:
+          type: string
+          format: date-time
+    MemberPage:
+      type: object
+      required: [items, total, page, pageSize]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MemberSummary"
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+        pageSize:
+          type: integer
+    AccessWindowInput:
+      type: object
+      required: [weekday, startsAt, endsAt]
+      properties:
+        weekday:
+          type: integer
+          minimum: 0
+          maximum: 6
+          description: Monday is 0 and Sunday is 6.
+        startsAt:
+          type: string
+          pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+        endsAt:
+          type: string
+          pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+    AccessWindow:
+      allOf:
+        - $ref: "#/components/schemas/AccessWindowInput"
+        - type: object
+          required: [id]
+          properties:
+            id:
+              type: string
+              format: uuid
+    MembershipPlanInput:
+      type: object
+      required: [name, monthlyPriceKes, isActive, accessWindows]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        monthlyPriceKes:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+        isActive:
+          type: boolean
+        accessWindows:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccessWindowInput"
+    MembershipPlanUpdate:
+      type: object
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        monthlyPriceKes:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+        isActive:
+          type: boolean
+        accessWindows:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccessWindowInput"
+    MembershipPlan:
+      type: object
+      required: [id, name, monthlyPriceKes, isActive, scheduleConfigured, accessWindows, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        monthlyPriceKes:
+          type: integer
+        isActive:
+          type: boolean
+        scheduleConfigured:
+          type: boolean
+        accessWindows:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccessWindow"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    SubscriptionInput:
+      type: object
+      required: [planId, startsOn]
+      properties:
+        planId:
+          type: string
+          format: uuid
+        startsOn:
+          type: string
+          format: date
+    Subscription:
+      type: object
+      required: [id, memberId, memberName, memberNumber, planId, planName, monthlyPriceKes, startsOn, expiresOn, status, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        memberId:
+          type: string
+          format: uuid
+        memberName:
+          type: string
+        memberNumber:
+          type: string
+        planId:
+          type: string
+          format: uuid
+        planName:
+          type: string
+        monthlyPriceKes:
+          type: integer
+        startsOn:
+          type: string
+          format: date
+        expiresOn:
+          type: string
+          format: date
+        status:
+          $ref: "#/components/schemas/SubscriptionStatus"
+        createdAt:
+          type: string
+          format: date-time
+    SubscriptionPage:
+      type: object
+      required: [items, total, page, pageSize]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Subscription"
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+        pageSize:
+          type: integer
+    PaymentInput:
+      type: object
+      required: [memberId, amountKes, method]
+      properties:
+        memberId:
+          type: string
+          format: uuid
+        subscriptionId:
+          type: ["string", "null"]
+          format: uuid
+        amountKes:
+          type: integer
+          minimum: 1
+          maximum: 1000000
+        method:
+          $ref: "#/components/schemas/PaymentMethod"
+        reference:
+          type: ["string", "null"]
+          minLength: 1
+          maxLength: 80
+        paidAt:
+          type: ["string", "null"]
+          format: date-time
+    PaymentVoidInput:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 500
+    Payment:
+      type: object
+      required: [id, memberId, memberName, memberNumber, subscriptionId, amountKes, currency, method, reference, status, verificationStatus, paidAt, recordedByName, createdAt, voidReason]
+      properties:
+        id:
+          type: string
+          format: uuid
+        memberId:
+          type: string
+          format: uuid
+        memberName:
+          type: string
+        memberNumber:
+          type: string
+        subscriptionId:
+          type: ["string", "null"]
+          format: uuid
+        amountKes:
+          type: integer
+        currency:
+          type: string
+          enum: [KES]
+        method:
+          $ref: "#/components/schemas/PaymentMethod"
+        reference:
+          type: ["string", "null"]
+        status:
+          $ref: "#/components/schemas/PaymentStatus"
+        verificationStatus:
+          type: string
+          enum: [staff_recorded]
+        paidAt:
+          type: string
+          format: date-time
+        recordedByName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        voidReason:
+          type: ["string", "null"]
+    PaymentPage:
+      type: object
+      required: [items, total, page, pageSize]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Payment"
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+        pageSize:
+          type: integer
+    AttendanceLookupInput:
+      type: object
+      minProperties: 1
+      properties:
+        memberId:
+          type: ["string", "null"]
+          format: uuid
+        qrToken:
+          type: ["string", "null"]
+          minLength: 32
+          maxLength: 128
+    AttendanceRestriction:
+      type: object
+      required: [code, message, overrideAllowed]
+      properties:
+        code:
+          $ref: "#/components/schemas/AttendanceRestrictionCode"
+        message:
+          type: string
+        overrideAllowed:
+          type: boolean
+    AttendanceReview:
+      type: object
+      required: [member, subscription, plan, checkedAt, restrictions, canCheckIn, duplicateCheckInAt]
+      properties:
+        member:
+          $ref: "#/components/schemas/MemberSummary"
+        subscription:
+          oneOf:
+            - $ref: "#/components/schemas/Subscription"
+            - type: "null"
+        plan:
+          oneOf:
+            - $ref: "#/components/schemas/MembershipPlan"
+            - type: "null"
+        checkedAt:
+          type: string
+          format: date-time
+        restrictions:
+          type: array
+          items:
+            $ref: "#/components/schemas/AttendanceRestriction"
+        canCheckIn:
+          type: boolean
+        duplicateCheckInAt:
+          type: ["string", "null"]
+          format: date-time
+    CheckInInput:
+      type: object
+      required: [memberId, confirmed, source]
+      properties:
+        memberId:
+          type: string
+          format: uuid
+        confirmed:
+          type: boolean
+          enum: [true]
+        source:
+          $ref: "#/components/schemas/CheckInSource"
+    CheckInOverrideInput:
+      type: object
+      required: [memberId, confirmed, source, reason]
+      properties:
+        memberId:
+          type: string
+          format: uuid
+        confirmed:
+          type: boolean
+          enum: [true]
+        source:
+          $ref: "#/components/schemas/CheckInSource"
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 500
+    CheckIn:
+      type: object
+      required: [id, memberId, memberName, memberNumber, checkedInAt, source, wasOverridden, overrideReason, restrictionCodes, staffName]
+      properties:
+        id:
+          type: string
+          format: uuid
+        memberId:
+          type: string
+          format: uuid
+        memberName:
+          type: string
+        memberNumber:
+          type: string
+        checkedInAt:
+          type: string
+          format: date-time
+        source:
+          type: string
+          enum: [qr, manual]
+        wasOverridden:
+          type: boolean
+        overrideReason:
+          type: ["string", "null"]
+        restrictionCodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/AttendanceRestrictionCode"
+        staffName:
+          type: string
+    CheckInPage:
+      type: object
+      required: [items, total, page, pageSize]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CheckIn"
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+        pageSize:
+          type: integer
     ApiError:
       type: object
       required: [error, code]

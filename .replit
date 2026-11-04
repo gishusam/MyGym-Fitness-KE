@@ -26,4 +26,4 @@ packages = ["postgresql"]
 [userenv]
 
 [userenv.shared]
-INITIAL_OWNER_EMAIL = "samwelngugi24@gmail "
+INITIAL_OWNER_EMAIL = "samwelngugi24@gmail.com"

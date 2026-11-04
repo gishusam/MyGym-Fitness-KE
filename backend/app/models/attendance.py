@@ -50,5 +50,5 @@ class CheckIn(Base):
         JSONB,
         nullable=False,
         default=list,
-        server_default=text("'[]'::jsonb"),
+        server_default=text("'[]'"),
     )

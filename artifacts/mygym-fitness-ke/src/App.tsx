@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
-import { ClerkProvider, Show, SignIn, SignUp, useClerk } from '@clerk/react';
+import { ClerkProvider, Show, SignIn, SignUp, useClerk, useAuth } from '@clerk/react';
 import { publishableKeyFromHost } from '@clerk/react/internal';
 import { shadcn } from '@clerk/themes';
 import {
@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Link, Redirect, Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import {
+  setAuthTokenGetter,
   getGetCurrentStaffQueryKey, getGetGymSettingsQueryKey, getHealthCheckQueryKey,
   useBootstrapInitialOwner, useGetCurrentStaff, useGetGymSettings, useHealthCheck, useUpdateGymSettings,
 } from '@workspace/api-client-react';
@@ -521,6 +522,27 @@ function RoutedPages() {
   </Switch></RoutedErrorBoundary>;
 }
 
+
+function ClerkApiAuthBridge({ children }: { children: ReactNode }) {
+  const { isLoaded, getToken } = useAuth();
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    setAuthTokenGetter(() => getToken());
+    setReady(true);
+
+    return () => {
+      setAuthTokenGetter(null);
+    };
+  }, [isLoaded, getToken]);
+
+  if (!isLoaded || !ready) return <LoadingPage />;
+
+  return <>{children}</>;
+}
+
 function ClerkProviderWithRoutes() {
   const [, setLocation] = useLocation();
   return <ClerkProvider
@@ -536,10 +558,12 @@ function ClerkProviderWithRoutes() {
     routerPush={(to) => setLocation(stripBase(to))}
     routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
   >
-    <QueryClientProvider client={queryClient}>
+    <ClerkApiAuthBridge>
+      <QueryClientProvider client={queryClient}>
       <ClerkQueryCacheInvalidator />
       <TooltipProvider><RoutedPages /><Toaster /></TooltipProvider>
-    </QueryClientProvider>
+      </QueryClientProvider>
+    </ClerkApiAuthBridge>
   </ClerkProvider>;
 }
 

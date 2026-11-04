@@ -147,6 +147,20 @@ export const CheckInSource = {
   manual: 'manual',
 } as const;
 
+export interface FitnessAssessmentInput {
+  weightKg?: number | null;
+  heightCm?: number | null;
+  bodyFatPercent?: number | null;
+  musclePercent?: number | null;
+  visceralFatLevel?: number | null;
+}
+
+export interface FitnessAssessmentResponse extends FitnessAssessmentInput {
+  id: string;
+  recordedAt: string;
+  bmi?: number | null;
+}
+
 export interface MemberInput {
   /**
      * @minLength 2
@@ -163,6 +177,7 @@ export interface MemberInput {
      * @nullable
      */
   email?: string | null;
+  initialAssessment?: FitnessAssessmentInput | null;
 }
 
 export interface MemberUpdate {
@@ -199,6 +214,7 @@ export interface MemberSummary {
 export type MemberDetail = MemberSummary & {
   /** @minLength 32 */
   qrToken: string;
+  latestAssessment?: FitnessAssessmentResponse | null;
 };
 
 export interface MemberQr {
@@ -277,6 +293,7 @@ export interface MembershipPlan {
 
 export interface SubscriptionInput {
   planId: string;
+  /** Inclusive first access date in the gym's local calendar. */
   startsOn: string;
 }
 
@@ -288,7 +305,9 @@ export interface Subscription {
   planId: string;
   planName: string;
   monthlyPriceKes: number;
+  /** Inclusive first access date in the gym's local calendar. */
   startsOn: string;
+  /** Inclusive final access date; the term ends the day before the same calendar date in the following month, clamped to that month's last day. */
   expiresOn: string;
   status: SubscriptionStatus;
   createdAt: string;

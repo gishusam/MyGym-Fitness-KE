@@ -27,10 +27,56 @@ def normalize_phone(value: str) -> str:
     return normalized
 
 
+class FitnessAssessmentInput(ApiModel):
+    weight_kg: float | None = Field(default=None, gt=0, le=500, allow_inf_nan=False)
+    height_cm: float | None = Field(default=None, gt=0, le=300, allow_inf_nan=False)
+    body_fat_percent: float | None = Field(default=None, ge=0, le=100, allow_inf_nan=False)
+    muscle_percent: float | None = Field(default=None, ge=0, le=100, allow_inf_nan=False)
+    visceral_fat_level: float | None = Field(default=None, ge=0, le=100, allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def at_least_one_measurement(self) -> "FitnessAssessmentInput":
+        if all(getattr(self, field) is None for field in (
+            "weight_kg", "height_cm", "body_fat_percent", "muscle_percent", "visceral_fat_level"
+        )):
+            raise ValueError("Enter at least one fitness measurement or skip the assessment")
+        return self
+
+
+class FitnessAssessmentResponse(FitnessAssessmentInput):
+    id: UUID
+    recorded_at: datetime
+    bmi: float | None = None
+
+
+class FitnessAssessmentHistoryItem(ApiModel):
+    id: UUID
+    recorded_at: datetime
+    weight_kg: float | None = None
+    height_cm: float | None = None
+    bmi: float | None = None
+    body_fat_percent: float | None = None
+    muscle_percent: float | None = None
+    visceral_fat_level: float | None = None
+
+
+class FitnessAssessmentHistory(ApiModel):
+    items: list[FitnessAssessmentHistoryItem]
+
+
+class FitnessAssessmentRecordInput(FitnessAssessmentInput):
+    pass
+
+
+class FitnessAssessmentSaved(FitnessAssessmentHistoryItem):
+    pass
+
+
 class MemberInput(ApiModel):
     full_name: str = Field(min_length=2, max_length=160)
     phone: str = Field(min_length=9, max_length=20)
     email: str | None = Field(default=None, max_length=320)
+    initial_assessment: FitnessAssessmentInput | None = None
 
     @field_validator("full_name")
     @classmethod
@@ -114,6 +160,7 @@ class MemberSummary(ApiModel):
 
 class MemberDetail(MemberSummary):
     qr_token: str
+    latest_assessment: FitnessAssessmentResponse | None = None
 
 
 class MemberQr(ApiModel):
@@ -217,9 +264,36 @@ class MembershipPlanResponse(ApiModel):
     updated_at: datetime
 
 
+# MYGYM_UPGRADE_V1 — staff-confirmed upgrade, never treated as M-Pesa verification.
+class MembershipUpgradeInput(ApiModel):
+    to_plan_id: UUID
+    method: PaymentMethod
+    reference: str = Field(min_length=3, max_length=80)
+
+    @field_validator("reference")
+    @classmethod
+    def trim_reference(cls, value: str) -> str:
+        value = value.strip()
+        if len(value) < 3:
+            raise ValueError("Enter a payment reference of at least three characters")
+        return value
+
+
+class MembershipUpgradeResponse(ApiModel):
+    id: UUID
+    subscription_id: UUID
+    from_plan_name: str
+    to_plan_name: str
+    topup_kes: int
+    payment_id: UUID
+    expires_on: date
+
+
 class SubscriptionInput(ApiModel):
     plan_id: UUID
-    starts_on: date
+    starts_on: date = Field(
+        description="Inclusive first access date in the gym's local calendar."
+    )
 
 
 class SubscriptionResponse(ApiModel):
@@ -230,8 +304,15 @@ class SubscriptionResponse(ApiModel):
     plan_id: UUID
     plan_name: str
     monthly_price_kes: int
-    starts_on: date
-    expires_on: date
+    starts_on: date = Field(
+        description="Inclusive first access date in the gym's local calendar."
+    )
+    expires_on: date = Field(
+        description=(
+            "Inclusive final access date. The term ends the day before the same "
+            "calendar date in the following month, clamped to that month's last day."
+        )
+    )
     status: Literal["scheduled", "active", "expired", "cancelled"]
     created_at: datetime
 

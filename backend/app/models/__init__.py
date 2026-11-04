@@ -1,7 +1,9 @@
 from backend.app.models.audit_log import AuditLog
 from backend.app.models.attendance import CheckIn
+from backend.app.models.fitness_assessment import FitnessAssessment
 from backend.app.models.gym_settings import GymSettings
 from backend.app.models.member import Member, MemberStatus
+from backend.app.models.membership_upgrade import MembershipUpgrade
 from backend.app.models.membership import (
     MembershipPlan,
     PlanAccessWindow,
@@ -14,9 +16,11 @@ from backend.app.models.staff_user import StaffRole, StaffStatus, StaffUser
 __all__ = [
     "AuditLog",
     "CheckIn",
+    "FitnessAssessment",
     "GymSettings",
     "Member",
     "MemberStatus",
+    "MembershipUpgrade",
     "MembershipPlan",
     "Payment",
     "PaymentMethod",

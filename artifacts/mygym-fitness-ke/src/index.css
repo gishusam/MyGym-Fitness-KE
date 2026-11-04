@@ -871,3 +871,142 @@
   .pending-email { flex-direction: column; }
   .pending-bottom { font-size: 8px; }
 }
+
+
+/* MYGYM_REGISTRATION_LIGHT_V2: Light registration wizard styled to match MyGym operations. */
+.op-wizard-overlay{background:#1f302783;backdrop-filter:blur(3px)}
+.op-registration-wizard{
+  width:min(720px,100%);max-height:min(92dvh,900px);overflow:auto;
+  padding:29px;border:1px solid #e1e8e2;border-radius:15px;
+  background:#fff;color:#34443a;box-shadow:0 20px 80px #1b302b30;
+  font-family:var(--app-font-sans)
+}
+.op-wizard-heading{display:flex;align-items:center;gap:11px}
+.op-wizard-heading>svg{flex:none;color:#47764f}
+.op-registration-wizard .op-wizard-heading h2{
+  margin:0;flex:1;color:#2b3c31;
+  font:750 23px/1.2 var(--app-font-serif);letter-spacing:-.045em
+}
+.op-wizard-close{display:grid;place-items:center;width:31px;height:31px;
+  border:0;border-radius:7px;background:#f4f7f4;color:#748178;cursor:pointer}
+.op-wizard-close:hover{background:#eaf1eb;color:#34443a}
+.op-wizard-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:24px 0 23px}
+.op-wizard-step{
+  display:grid;gap:9px;padding:9px 5px 5px;border:1px solid transparent;
+  border-radius:8px;background:transparent;color:#87948a;cursor:pointer;
+  text-align:center;font:600 11px/1.4 var(--app-font-sans)
+}
+.op-wizard-step i{display:block;height:3px;border-radius:20px;background:#e4eae5}
+.op-wizard-step.is-current{color:#2f6545;background:#f1f7f2;border-color:#e1ece2}
+.op-wizard-step.is-current i,.op-wizard-step.is-past i{background:#477e58}
+.op-wizard-form{display:grid;gap:14px}
+.op-wizard-personal,.op-wizard-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 13px}
+.op-wizard-personal label:first-child{grid-column:1/-1}
+.op-wizard-membership{display:grid;gap:14px;max-width:100%}
+.op-wizard-form label{display:grid;gap:6px;color:#49584e;font:700 10px/1.5 var(--app-font-sans)}
+.op-wizard-form input,.op-wizard-form select{
+  width:100%;min-width:0;height:39px;padding:0 10px;
+  border:1px solid #dfe6e0;border-radius:7px;outline:none;
+  background:#fbfcfb;color:#34443a;font:500 11px var(--app-font-sans);
+  color-scheme:light;box-shadow:none
+}
+.op-wizard-form input::placeholder{color:#a4ada6}
+.op-wizard-form input:focus,.op-wizard-form select:focus{
+  border-color:#8cae93;box-shadow:0 0 0 3px #285d4310
+}
+.op-wizard-form input[type=number]{appearance:textfield;-moz-appearance:textfield}
+.op-wizard-form input[type=number]::-webkit-inner-spin-button,
+.op-wizard-form input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.op-wizard-bmi{
+  display:grid;align-content:center;gap:6px;padding:0 10px;
+  min-height:39px;border:1px solid #e4eae5;border-radius:7px;background:#f7faf7
+}
+.op-wizard-bmi span{color:#68796d;font:700 10px var(--app-font-sans)}
+.op-wizard-bmi strong{color:#2f6545;font:700 13px var(--app-font-sans)}
+.op-wizard-optional{font-size:9px;color:#9aa49c;font-weight:500}
+.op-wizard-hint{margin:0;color:#89958c;font-size:10px;line-height:1.6}
+.op-wizard-error{padding:10px 12px;border:1px solid #f0d5d0;border-radius:7px;
+  background:#fff7f5;color:#a1483d;font-size:10px}
+.op-wizard-footer{display:flex;align-items:center;justify-content:space-between;gap:14px;
+  margin-top:13px;padding-top:15px;border-top:1px solid #edf0ed}
+.op-wizard-footer>span{max-width:60%;color:#8b978e;font-size:10px;line-height:1.5}
+.op-wizard-buttons{display:flex;gap:8px;align-items:center;margin-left:auto}
+.op-wizard-next,.op-wizard-back{display:flex;align-items:center;justify-content:center;
+  gap:8px;min-height:38px;padding:0 15px;border-radius:7px;
+  cursor:pointer;white-space:nowrap;font:700 11px var(--app-font-sans)}
+.op-wizard-next{border:1px solid #285d43;background:#285d43;color:#fff}
+.op-wizard-next:hover{background:#204d37}
+.op-wizard-back{border:1px solid #e2e9e3;background:#f8faf8;color:#4d6c53}
+.op-wizard-back:hover{background:#edf4ee}
+.op-wizard-next:disabled,.op-wizard-back:disabled{opacity:.55;cursor:not-allowed}
+@media(max-width:650px){
+  .op-wizard-overlay{padding:10px}
+  .op-registration-wizard{max-height:96dvh;padding:21px 17px;border-radius:13px}
+  .op-registration-wizard .op-wizard-heading h2{font-size:19px}
+  .op-wizard-steps{gap:3px;margin:17px 0}
+  .op-wizard-step{font-size:9px;padding:7px 2px}
+  .op-wizard-personal{grid-template-columns:1fr}
+  .op-wizard-personal label:first-child{grid-column:auto}
+  .op-wizard-metrics{gap:13px 10px}
+  .op-wizard-footer{align-items:flex-start;flex-direction:column}
+  .op-wizard-footer>span{max-width:100%}
+  .op-wizard-buttons{width:100%;justify-content:flex-end}
+}
+@media(max-width:380px){.op-wizard-metrics{grid-template-columns:1fr}}
+
+
+/* MYGYM_TASK5_ASSESSMENTS_V1 — scoped member fitness profile styles. */
+.op-fitness-section{margin-top:22px;padding-top:19px;border-top:1px solid #e5ebe6;font-family:var(--app-font-sans);color:#34443a}
+.op-fitness-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+.op-fitness-heading h3{margin:0;font:700 15px var(--app-font-sans);color:#34443a}
+.op-fitness-heading p{margin:4px 0 0;font-size:10px;color:#8d9890}
+.op-fitness-message{margin:10px 0;color:#7b5b32;font-size:11px}
+.op-fitness-form{padding:15px;margin:0 0 18px;border:1px solid #e5ebe6;border-radius:10px;background:#fbfcfb}
+.op-fitness-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.op-fitness-fields label{display:grid;gap:6px;color:#49584e;font-size:10px;font-weight:700}
+.op-fitness-fields input{width:100%;min-width:0;height:39px;padding:0 10px;border:1px solid #dfe6e0;border-radius:7px;outline:none;background:#fff;color:#34443a;font:500 11px var(--app-font-sans)}
+.op-fitness-fields input:focus{border-color:#8cae93;box-shadow:0 0 0 3px #285d4310}
+.op-fitness-bmi{display:grid;gap:4px;align-content:center;padding:0 10px;border-radius:7px;background:#edf5ee}
+.op-fitness-bmi span,.op-fitness-bmi small{font-size:9px;color:#68786b}.op-fitness-bmi strong{font-size:16px}
+.op-fitness-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.op-fitness-kpis>div{padding:11px 12px;border:1px solid #e5ebe6;border-radius:8px;background:#fbfcfb;display:grid;gap:5px}
+.op-fitness-kpis small{font-size:9px;color:#8d9890}.op-fitness-kpis b{font-size:13px;color:#34443a}
+.op-fitness-delta{margin:13px 0 0;font-size:10px;color:#6a7a6f}
+.op-fitness-chart{margin:17px 0;padding:13px;border:1px solid #e5ebe6;border-radius:8px;color:#37734f}
+.op-fitness-chart span{font-size:10px;color:#78867c}.op-fitness-chart svg{display:block;width:100%;height:105px;margin-top:10px}
+.op-fitness-history{margin-top:18px}.op-fitness-history h4{margin:0 0 10px;font-size:11px}
+.op-fitness-entries{display:grid;gap:0;max-height:180px;overflow:auto}
+.op-fitness-entries>div{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:10px 0;border-bottom:1px solid #edf0ed;font-size:10px}
+.op-fitness-entries time{color:#4d5e50;font-weight:700}.op-fitness-entries span{color:#8a968c}
+@media(max-width:650px){.op-fitness-fields,.op-fitness-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+
+/* MYGYM_EDIT_MEMBER_SUBSCRIPTIONS_V1 - scoped to edit-member dialog, native MyGym light theme */
+.op-edit-member-dialog {width:min(560px,100%)}
+.op-edit-subscriptions {border-top:1px solid #e8eee9;margin-top:22px;padding-top:21px;font-family:var(--app-font-sans)}
+.op-edit-subscriptions-heading {display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:13px}
+.op-edit-subscriptions-heading h3 {margin:0;font:700 14px/1.3 var(--app-font-serif);color:#304338}
+.op-edit-subscriptions-heading span,.op-edit-subscription-muted {color:#86938a;font-size:10px;line-height:1.6}
+.op-edit-subscription-current {display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:13px;border:1px solid #e2eae3;border-radius:9px;background:#f8faf8}
+.op-edit-subscription-current > div {display:grid;align-content:start;gap:4px}
+.op-edit-subscription-current small {font:500 9px/1.4 var(--app-font-sans);color:#87958a}
+.op-edit-subscription-current strong {font:650 11px/1.4 var(--app-font-sans);color:#334b3a}
+.op-edit-subscription-status {justify-self:start;padding:4px 8px;border-radius:999px;background:#e9f3ea;color:#3d744d;font-size:9px;font-weight:700;text-transform:capitalize}
+.op-edit-subscription-form {margin-top:18px}
+.op-edit-subscription-form h4 {margin:0;font:700 11px var(--app-font-sans);color:#46594b}
+.op-edit-subscription-form .op-edit-subscription-muted {margin:0}
+.op-edit-subscription-error,.op-edit-subscription-success {margin:0;padding:9px 11px;border-radius:7px;font:500 10px/1.5 var(--app-font-sans)}
+.op-edit-subscription-error {color:#a54439;background:#fcf3f0;border:1px solid #f0d3ca}
+.op-edit-subscription-success {color:#2b6541;background:#f0f7f1;border:1px solid #d7e6d9}
+@media(max-width:520px){.op-edit-subscription-current{grid-template-columns:1fr}}
+
+/* MYGYM_UPGRADE_V1 — same native light MyGym typography and controls */
+.op-upgrade{margin-top:19px;padding:15px 0;border-top:1px solid #e8eee9;border-bottom:1px solid #e8eee9;font-family:var(--app-font-sans)}
+.op-upgrade-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.op-upgrade-header h4{margin:0;color:#34483a;font:700 11px var(--app-font-sans)}
+.op-upgrade-header p{margin:5px 0 0;color:#86938a;font:500 10px/1.5 var(--app-font-sans)}
+.op-upgrade .op-form{margin-top:13px}
+.op-upgrade-quote{display:grid;grid-template-columns:1fr 1fr;gap:7px;background:#f6faf7;border:1px solid #dfe9e0;border-radius:8px;padding:11px;font-size:10px;color:#536458}
+.op-upgrade-quote strong{font-size:12px;color:#245b3d}
+.op-upgrade-quote small{font-size:9px;color:#71847a}
+@media(max-width:520px){.op-upgrade-header{align-items:flex-start;flex-direction:column}}

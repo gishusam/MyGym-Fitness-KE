@@ -14,8 +14,10 @@ from backend.app.core.auth import require_owner, require_owner_or_receptionist
 from backend.app.db.session import get_db
 from backend.app.models.attendance import CheckIn
 from backend.app.models.audit_log import AuditLog
+from backend.app.models.fitness_assessment import FitnessAssessment
 from backend.app.models.gym_settings import GymSettings
 from backend.app.models.member import Member, MemberStatus
+from backend.app.models.membership_upgrade import MembershipUpgrade
 from backend.app.models.membership import (
     MembershipPlan,
     PlanAccessWindow,
@@ -33,6 +35,11 @@ from backend.app.schemas.operations import (
     CheckInPage,
     CheckInResponse,
     MemberDetail,
+    FitnessAssessmentResponse,
+    FitnessAssessmentHistory,
+    FitnessAssessmentHistoryItem,
+    FitnessAssessmentRecordInput,
+    FitnessAssessmentSaved,
     MemberInput,
     MemberPage,
     MemberQr,
@@ -46,6 +53,8 @@ from backend.app.schemas.operations import (
     PaymentResponse,
     PaymentVoidInput,
     SubscriptionInput,
+    MembershipUpgradeInput,
+    MembershipUpgradeResponse,
     SubscriptionPage,
     SubscriptionResponse,
 )
@@ -271,6 +280,90 @@ def _lock_member(session: Session, member_id: UUID) -> Member:
     return member
 
 
+def _member_detail_with_fitness(session: Session, member: Member) -> MemberDetail:
+    latest = session.scalar(
+        select(FitnessAssessment)
+        .where(FitnessAssessment.member_id == member.id)
+        .order_by(FitnessAssessment.recorded_at.desc(), FitnessAssessment.id.desc())
+        .limit(1)
+    )
+    detail = member_detail(member)
+    if latest is not None:
+        detail.latest_assessment = FitnessAssessmentResponse(
+            id=latest.id,
+            recorded_at=latest.recorded_at,
+            weight_kg=latest.weight_kg,
+            height_cm=latest.height_cm,
+            bmi=latest.bmi,
+            body_fat_percent=latest.body_fat_percent,
+            muscle_percent=latest.muscle_percent,
+            visceral_fat_level=latest.visceral_fat_level,
+        )
+    return detail
+
+
+# MYGYM_TASK5_ASSESSMENTS_V1 — historical, staff-authenticated fitness tracking.
+def _assessment_item(item: FitnessAssessment) -> FitnessAssessmentHistoryItem:
+    return FitnessAssessmentHistoryItem(
+        id=item.id, recorded_at=item.recorded_at, weight_kg=item.weight_kg,
+        height_cm=item.height_cm, bmi=item.bmi,
+        body_fat_percent=item.body_fat_percent, muscle_percent=item.muscle_percent,
+        visceral_fat_level=item.visceral_fat_level,
+    )
+
+
+@router.get(
+    "/members/{member_id}/fitness-assessments",
+    response_model=FitnessAssessmentHistory,
+    tags=["fitness"],
+)
+def list_member_fitness_assessments(
+    member_id: UUID,
+    _staff: StaffUser = Depends(require_owner_or_receptionist),
+    session: Session = Depends(get_db),
+) -> FitnessAssessmentHistory:
+    if session.get(Member, member_id) is None:
+        _raise_error(404, "Member not found", "member_not_found")
+    results = list(session.scalars(
+        select(FitnessAssessment)
+        .where(FitnessAssessment.member_id == member_id)
+        .order_by(FitnessAssessment.recorded_at.desc(), FitnessAssessment.id.desc())
+        .limit(100)
+    ))
+    return FitnessAssessmentHistory(items=[_assessment_item(item) for item in results])
+
+
+@router.post(
+    "/members/{member_id}/fitness-assessments",
+    response_model=FitnessAssessmentSaved,
+    status_code=status.HTTP_201_CREATED,
+    tags=["fitness"],
+)
+def record_member_fitness_assessment(
+    member_id: UUID,
+    data: FitnessAssessmentRecordInput,
+    staff: StaffUser = Depends(require_owner_or_receptionist),
+    session: Session = Depends(get_db),
+) -> FitnessAssessmentSaved:
+    member = _lock_member(session, member_id)
+    height_m = data.height_cm / 100 if data.height_cm is not None else None
+    bmi = (
+        round(data.weight_kg / (height_m ** 2), 1)
+        if data.weight_kg is not None and height_m else None
+    )
+    item = FitnessAssessment(
+        id=uuid4(), member_id=member.id, recorded_by_staff_id=staff.id,
+        recorded_at=datetime.now(timezone.utc),
+        weight_kg=data.weight_kg, height_cm=data.height_cm, bmi=bmi,
+        body_fat_percent=data.body_fat_percent, muscle_percent=data.muscle_percent,
+        visceral_fat_level=data.visceral_fat_level,
+    )
+    session.add(item)
+    session.commit()
+    session.refresh(item)
+    return FitnessAssessmentSaved(**_assessment_item(item).model_dump())
+
+
 @router.get(
     "/members",
     operation_id="listMembers",
@@ -340,12 +433,34 @@ def create_member(
         qr_token=secrets.token_urlsafe(32),
     )
     session.add(member)
+    # Persist the parent row before its FK-dependent assessment; commit remains atomic.
+    # Flush within the guarded transaction so any DB failure is handled consistently.
     try:
-        session.commit()
+        session.flush()
     except IntegrityError:
         _member_conflict_after_integrity_error(session, data.phone)
+    if data.initial_assessment is not None:
+        metrics = data.initial_assessment
+        height_m = metrics.height_cm / 100 if metrics.height_cm else None
+        bmi = round(metrics.weight_kg / (height_m * height_m), 1) if metrics.weight_kg is not None and height_m else None
+        session.add(FitnessAssessment(
+            id=uuid4(), member_id=member.id, recorded_by_staff_id=_staff.id,
+            weight_kg=metrics.weight_kg, height_cm=metrics.height_cm, bmi=bmi,
+            body_fat_percent=metrics.body_fat_percent, muscle_percent=metrics.muscle_percent,
+            visceral_fat_level=metrics.visceral_fat_level,
+        ))
+    try:
+        session.commit()
+    except IntegrityError as exc:
+        # Log metadata only; never log SQL parameters containing member information.
+        diag = getattr(exc.orig, "diag", None)
+        constraint = getattr(diag, "constraint_name", None)
+        table = getattr(diag, "table_name", None)
+        sqlstate = getattr(exc.orig, "sqlstate", None)
+        print(f"[MYGYM MEMBER SAVE] constraint={constraint!r}, table={table!r}, sqlstate={sqlstate!r}", flush=True)
+        _member_conflict_after_integrity_error(session, data.phone)
     session.refresh(member)
-    return member_detail(member)
+    return _member_detail_with_fitness(session, member)
 
 
 @router.get(
@@ -362,7 +477,7 @@ def get_member_detail(
     member = session.get(Member, member_id)
     if member is None:
         _raise_error(404, "Member not found", "member_not_found")
-    return member_detail(member)
+    return _member_detail_with_fitness(session, member)
 
 
 @router.patch(
@@ -391,7 +506,7 @@ def update_member(
             session, phone or member.phone, member.id
         )
     session.refresh(member)
-    return member_detail(member)
+    return _member_detail_with_fitness(session, member)
 
 
 @router.post(
@@ -653,6 +768,93 @@ def create_subscription(
     return subscription_response(subscription, member, today)
 
 
+# MYGYM_UPGRADE_V1 — atomic effective plan change + top-up + immutable upgrade history.
+@router.post(
+    "/members/{member_id}/subscriptions/{subscription_id}/upgrade",
+    response_model=MembershipUpgradeResponse,
+    status_code=status.HTTP_201_CREATED,
+    tags=["memberships"],
+)
+def upgrade_membership(
+    member_id: UUID,
+    subscription_id: UUID,
+    data: MembershipUpgradeInput,
+    staff: StaffUser = Depends(require_owner_or_receptionist),
+    session: Session = Depends(get_db),
+) -> MembershipUpgradeResponse:
+    # The member row lock serializes all upgrades for this member.
+    member = _lock_member(session, member_id)
+    current = session.scalar(
+        select(Subscription)
+        .where(Subscription.id == subscription_id, Subscription.member_id == member.id)
+        .with_for_update()
+    )
+    if current is None:
+        _raise_error(404, "Membership not found", "subscription_not_found")
+    today = gym_now(session).date()
+    if current.status == SubscriptionStatus.CANCELLED.value or not (current.starts_on <= today <= current.expires_on):
+        _raise_error(422, "Only an ongoing membership can be upgraded", "upgrade_requires_active_term")
+    if session.scalar(select(MembershipUpgrade.id).where(MembershipUpgrade.subscription_id == current.id).limit(1)):
+        _raise_error(409, "This membership has already been upgraded", "already_upgraded")
+    target = session.scalar(
+        select(MembershipPlan).where(MembershipPlan.id == data.to_plan_id).with_for_update()
+    )
+    if target is None:
+        _raise_error(404, "Target membership plan not found", "plan_not_found")
+    if not target.is_active or not access_windows(session, target.id):
+        _raise_error(422, "Configure and activate the new plan's access hours first", "plan_unavailable")
+    difference = target.monthly_price_kes - current.monthly_price_kes
+    if difference <= 0:
+        _raise_error(422, "Choose a higher-priced plan for an upgrade", "upgrade_requires_higher_plan")
+    if session.scalar(select(Payment.id).where(Payment.reference == data.reference).limit(1)):
+        _raise_error(409, "This payment reference has already been recorded", "payment_reference_exists")
+
+    # Payment reference is staff-entered evidence only; it is NOT Safaricom verified.
+    payment = Payment(
+        id=uuid4(), member_id=member.id, subscription_id=current.id,
+        amount_kes=difference, method=data.method.value, reference=data.reference,
+        status=PaymentStatus.RECORDED.value,
+        paid_at=gym_now(session).astimezone(timezone.utc), recorded_by_staff_id=staff.id,
+    )
+    session.add(payment)
+    session.flush()  # Resolve payment FK deterministically before upgrade record.
+    upgrade = MembershipUpgrade(
+        id=uuid4(), subscription_id=current.id, member_id=member.id,
+        from_plan_id=current.plan_id, from_plan_name=current.plan_name,
+        from_price_kes=current.monthly_price_kes,
+        to_plan_id=target.id, to_plan_name=target.name,
+        to_price_kes=target.monthly_price_kes, topup_kes=difference,
+        payment_id=payment.id, staff_id=staff.id,
+    )
+    session.add(upgrade)
+    # The effective plan changes, but dates and the original payments never change.
+    current.plan_id = target.id
+    current.plan_name = target.name
+    current.monthly_price_kes = target.monthly_price_kes
+    session.add(AuditLog(
+        id=uuid4(), actor_staff_id=staff.id, action="membership_upgraded",
+        entity_type="subscription", entity_id=str(current.id),
+        details={
+            "member_id": str(member.id), "from_plan_id": str(upgrade.from_plan_id),
+            "to_plan_id": str(target.id), "topup_kes": difference,
+            "payment_id": str(payment.id), "payment_reference": data.reference,
+            "expires_on": current.expires_on.isoformat(),
+        },
+    ))
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        if session.scalar(select(Payment.id).where(Payment.reference == data.reference).limit(1)):
+            _raise_error(409, "This payment reference has already been recorded", "payment_reference_exists")
+        _raise_error(409, "Membership was changed concurrently; refresh and try again", "upgrade_conflict")
+    return MembershipUpgradeResponse(
+        id=upgrade.id, subscription_id=current.id,
+        from_plan_name=upgrade.from_plan_name, to_plan_name=upgrade.to_plan_name,
+        topup_kes=difference, payment_id=payment.id, expires_on=current.expires_on,
+    )
+
+
 @router.get(
     "/payments",
     operation_id="listPayments",
@@ -789,6 +991,8 @@ def void_payment(
         _raise_error(404, "Payment not found", "payment_not_found")
     if payment.status == PaymentStatus.VOIDED.value:
         _raise_error(409, "This payment has already been voided", "payment_already_voided")
+    if session.scalar(select(MembershipUpgrade.id).where(MembershipUpgrade.payment_id == payment.id).limit(1)):
+        _raise_error(409, "Upgrade top-ups cannot be voided independently", "upgrade_payment_void_prohibited")
     member = session.get(Member, payment.member_id)
     payment.status = PaymentStatus.VOIDED.value
     payment.voided_by_staff_id = staff.id

@@ -147,6 +147,20 @@ export const CheckInSource = {
   manual: 'manual',
 } as const;
 
+export interface FitnessAssessmentInput {
+  weightKg?: number | null;
+  heightCm?: number | null;
+  bodyFatPercent?: number | null;
+  musclePercent?: number | null;
+  visceralFatLevel?: number | null;
+}
+
+export interface FitnessAssessmentResponse extends FitnessAssessmentInput {
+  id: string;
+  recordedAt: string;
+  bmi?: number | null;
+}
+
 export interface MemberInput {
   /**
      * @minLength 2
@@ -163,6 +177,7 @@ export interface MemberInput {
      * @nullable
      */
   email?: string | null;
+  initialAssessment?: FitnessAssessmentInput | null;
 }
 
 export interface MemberUpdate {
@@ -199,6 +214,7 @@ export interface MemberSummary {
 export type MemberDetail = MemberSummary & {
   /** @minLength 32 */
   qrToken: string;
+  latestAssessment?: FitnessAssessmentResponse | null;
 };
 
 export interface MemberQr {

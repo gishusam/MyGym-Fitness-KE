@@ -7,7 +7,7 @@ import {
   CreditCard, Dumbbell, LoaderCircle, Pencil, Plus, QrCode, RefreshCw, Search,
   ShieldCheck, UserRound, UsersRound, Wallet, X,
 } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import {
   getGetMemberDetailQueryKey, getListCheckInsQueryKey, getListMembersQueryKey,
   getListMembershipPlansQueryKey, getListPaymentsQueryKey, getListSubscriptionsQueryKey,
@@ -15,7 +15,7 @@ import {
   useGetCurrentStaff, useGetMemberDetail, useListCheckIns, useListMembers,
   useListMembershipPlans, useListPayments, useListSubscriptions, useLookupAttendance,
   useOverrideCheckIn, useRecordPayment, useRotateMemberQr, useUpdateMember,
-  useUpdateMembershipPlan, useVoidPayment,
+  useUpdateMembershipPlan, useVoidPayment, customFetch,
 } from '@workspace/api-client-react';
 import type { AttendanceReview, MembershipPlan, MembershipPlanInput, PaymentMethod } from '@workspace/api-client-react';
 
@@ -62,32 +62,288 @@ function Members() {
   const query = useListMembers({ search: search || undefined, page, pageSize: 10 });
   const profile = useGetMemberDetail(selected, { query: { queryKey: getGetMemberDetailQueryKey(selected), enabled: !!selected } });
   const create = useCreateMember(), update = useUpdateMember(), rotate = useRotateMemberQr();
+  const wizardPlans = useListMembershipPlans();
+  const wizardSubscription = useCreateSubscription();
+  const [wizardStep, setWizardStep] = useState(0);
+  const [wizardPlanId, setWizardPlanId] = useState('');
+  const [wizardStart, setWizardStart] = useState(todayInNairobi);
+  const [wizardSaving, setWizardSaving] = useState(false);
   const [name, setName] = useState(''), [phone, setPhone] = useState(''), [email, setEmail] = useState(''), [formError, setFormError] = useState(''), [success, setSuccess] = useState('');
-  const resetForm = () => { setName(''); setPhone(''); setEmail(''); setFormError(''); };
+  const [assessmentOpen, setAssessmentOpen] = useState(false);
+  const [measurements, setMeasurements] = useState({weightKg:'',heightCm:'',bodyFatPercent:'',musclePercent:'',visceralFatLevel:''});
+  const resetForm = () => { setName(''); setPhone(''); setEmail(''); setFormError(''); setAssessmentOpen(false); setMeasurements({weightKg:'',heightCm:'',bodyFatPercent:'',musclePercent:'',visceralFatLevel:''}); };
+  const resetWizard = () => {setWizardStep(0);setWizardPlanId('');setWizardStart(todayInNairobi());};
+  const parsedWeight = Number(measurements.weightKg);
+  const parsedHeight = Number(measurements.heightCm);
+  const previewBmi = measurements.weightKg && measurements.heightCm && parsedWeight > 0 && parsedHeight > 0
+    ? (parsedWeight / ((parsedHeight / 100) ** 2)).toFixed(1) : '—';
+
   function openEdit(id: string) {
     setSelected(id); const row = query.data?.items.find((item) => item.id === id);
     if (row) { setName(row.fullName); setPhone(row.phone); setEmail(row.email || ''); setMode('edit'); }
+  }
+  function validatePersonal() {
+    if(name.trim().length<2){setFormError('Enter a name with at least 2 characters.');return false;}
+    if(!/^(?:\+?254|0)(?:7|1)\d{8}$/.test(phone.trim().replace(/[\s()-]/g,''))){setFormError('Enter a valid Kenyan mobile number.');return false;}
+    if(email.trim()&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())){setFormError('Enter a valid email address.');return false;}
+    return true;
+  }
+  async function submitWizard(event: FormEvent) {
+    event.preventDefault();
+    if(wizardSaving)return;
+    setFormError('');
+    if(!validatePersonal()){setWizardStep(0);return;}
+    if(wizardPlanId&&!wizardStart){setFormError('Select a membership start date.');return;}
+    const fields = Object.entries(measurements).filter(([,v])=>v.trim()!=='');
+    const values = Object.fromEntries(fields.map(([k,v])=>[k,Number(v)]));
+    const memberData = {fullName:name.trim(),phone:phone.trim(),email:email.trim()||null,initialAssessment:fields.length?(values as {weightKg?:number;heightCm?:number;bodyFatPercent?:number;musclePercent?:number;visceralFatLevel?:number}):null};
+    setWizardSaving(true);
+    let createdId:string|undefined;
+    try {
+      const created=await create.mutateAsync({data:memberData});
+      createdId=created.id;
+      if(wizardPlanId){
+        try {await wizardSubscription.mutateAsync({memberId:created.id,data:{planId:wizardPlanId,startsOn:wizardStart}});}
+        catch(error){setSuccess(`Member registered, but the membership could not be assigned. Open Subscriptions to assign it manually. ${serverError(error,'')}`);setMode(null);resetForm();resetWizard();return;}
+      }
+      setSuccess(wizardPlanId?'Member registered and membership assigned.':'Member registered.');
+      setMode(null);resetForm();resetWizard();
+    } catch(error) {
+      if(!createdId)setFormError(serverError(error,'Member could not be registered. Please check the details.'));
+    } finally {
+      await client.invalidateQueries({queryKey:getListMembersQueryKey()});
+      await client.invalidateQueries({queryKey:getListSubscriptionsQueryKey()});
+      setWizardSaving(false);
+    }
   }
   async function submit(event: FormEvent) {
     event.preventDefault(); setFormError(''); setSuccess('');
     const normalizedPhone = phone.trim().replace(/[\s()-]/g, '');
     if (name.trim().length < 2) { setFormError('Enter a name with at least 2 characters.'); return; }
     if (!/^(?:\+?254|0)(?:7|1)\d{8}$/.test(normalizedPhone)) { setFormError('Enter a valid Kenyan mobile number.'); return; }
-    const data = { fullName: name.trim(), phone: phone.trim(), email: email.trim() || null };
+    const fields = Object.entries(measurements).filter(([, value]) => value.trim() !== '');
+    const assessment = Object.fromEntries(fields.map(([key, value]) => [key, Number(value)]));
+    const data = mode === 'new' ? {
+      fullName: name.trim(), phone: phone.trim(), email: email.trim() || null,
+      initialAssessment: fields.length ? (assessment as {weightKg?:number;heightCm?:number;bodyFatPercent?:number;musclePercent?:number;visceralFatLevel?:number}) : null,
+    } : { fullName: name.trim(), phone: phone.trim(), email: email.trim() || null };
+
     const opts = { onSuccess: async () => { await client.invalidateQueries({ queryKey: getListMembersQueryKey() }); if (selected) await client.invalidateQueries({ queryKey: getGetMemberDetailQueryKey(selected) }); setMode(null); resetForm(); setSuccess(mode === 'edit' ? 'Member details updated.' : 'Member registered.'); }, onError: (error: unknown) => setFormError(serverError(error, 'Could not save this member. Check the details and try again.')) };
     if (mode === 'edit') update.mutate({ memberId: selected, data }, opts); else create.mutate({ data }, opts);
   }
   return <>
     <Heading eyebrow="MEMBER DIRECTORY" title="Members" detail="Find people quickly, keep their details accurate, and manage their access card."
-      action={<button className="op-button op-primary" onClick={() => { resetForm(); setSelected(''); setMode('new'); }} data-testid="button-register-member"><Plus size={16} /> Register member</button>} />
+      action={<button className="op-button op-primary" onClick={() => { resetForm(); resetWizard(); setSelected(''); setMode('new'); }} data-testid="button-register-member"><Plus size={16} /> Register member</button>} />
     {success && <Notice>{success}</Notice>}
     <section className="op-panel"><div className="op-toolbar"><label className="op-search"><Search size={17} /><input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search name, number or phone" data-testid="input-member-search" /></label><span className="op-count" data-testid="text-member-total">{query.data?.total ?? '—'} members</span></div>
     {query.isLoading ? <LoadingRows /> : query.error ? <Notice error>Member records could not be loaded. <button onClick={() => query.refetch()} data-testid="button-retry-members">Try again</button></Notice> : !query.data?.items.length ? <div className="op-empty"><UsersRound size={25} /><b>{search ? 'No matching members' : 'Your member list starts here'}</b><p>{search ? 'Try another name, member number or phone.' : 'Register a member to create their profile and QR access card.'}</p></div> :
       <div className="op-table-wrap"><table className="op-table"><thead><tr><th>Member</th><th>Phone</th><th>Registered</th><th>Status</th><th /></tr></thead><tbody>{query.data.items.map((m) => <tr key={m.id} data-testid={`row-member-${m.id}`}><td><button className="op-person" onClick={() => { setSelected(m.id); setMode('profile'); }} data-testid={`button-profile-${m.id}`}><span className="op-initials">{m.initials}</span><span><b>{m.fullName}</b><small>{m.memberNumber}</small></span></button></td><td>{m.phone}</td><td>{date(m.registeredAt)}</td><td><Status value={m.status} /></td><td className="op-row-actions"><button className="op-icon-button" aria-label={`Edit ${m.fullName}`} onClick={() => openEdit(m.id)} data-testid={`button-edit-member-${m.id}`}><Pencil size={15} /></button><button className="op-text-button" onClick={() => { setSelected(m.id); setMode('profile'); }} data-testid={`button-view-member-${m.id}`}>View <ArrowRight size={14} /></button></td></tr>)}</tbody></table></div>}
     <div className="op-pagination"><span>Page {page} of {Math.max(1, Math.ceil((query.data?.total || 0) / 10))}</span><div><button disabled={page <= 1} onClick={() => setPage(page - 1)} data-testid="button-members-previous"><ChevronLeft size={16} /> Previous</button><button disabled={page >= Math.ceil((query.data?.total || 0) / 10)} onClick={() => setPage(page + 1)} data-testid="button-members-next">Next <ChevronRight size={16} /></button></div></div></section>
-    {mode && mode !== 'profile' && <div className="op-overlay"><section className="op-dialog"><button className="op-close" onClick={() => setMode(null)} aria-label="Close" data-testid="button-close-member-form"><X size={18} /></button><div className="op-modal-kicker">{mode === 'edit' ? 'MEMBER DETAILS' : 'NEW RECORD'}</div><h2>{mode === 'edit' ? 'Edit member' : 'Register a member'}</h2><p>Use the member’s preferred name and current contact number.</p><form onSubmit={submit} className="op-form"><label>Full name<input value={name} onChange={(e) => setName(e.target.value)} required minLength={2} maxLength={160} data-testid="input-member-name" /></label><label>Phone number<input value={phone} onChange={(e) => setPhone(e.target.value)} required minLength={9} maxLength={20} data-testid="input-member-phone" /></label><label>Email <span className="op-optional">Optional</span><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} data-testid="input-member-email" /></label>{formError && <Notice error>{formError}</Notice>}<div className="op-form-actions"><button type="button" className="op-button op-light" onClick={() => setMode(null)} data-testid="button-cancel-member">Cancel</button><button className="op-button op-primary" disabled={create.isPending || update.isPending} data-testid="button-save-member">{create.isPending || update.isPending ? 'Saving…' : mode === 'edit' ? 'Save changes' : 'Register member'}</button></div></form></section></div>}
-    {mode === 'profile' && <div className="op-overlay"><section className="op-dialog op-profile-dialog"><button className="op-close" onClick={() => setMode(null)} aria-label="Close profile" data-testid="button-close-member-profile"><X size={18} /></button>{profile.isLoading ? <LoadingRows /> : profile.error || !profile.data ? <Notice error>Member profile unavailable. Close and try again.</Notice> : <><div className="op-modal-kicker">MEMBER PROFILE</div><h2>{profile.data.fullName}</h2><p>{profile.data.memberNumber} · Registered {date(profile.data.registeredAt)}</p><div className="op-profile-grid"><div className="op-profile-details"><div><small>Phone</small><b>{profile.data.phone}</b></div><div><small>Email</small><b>{profile.data.email || 'Not provided'}</b></div><div><small>Membership status</small><Status value={profile.data.status} /></div><button className="op-button op-light" onClick={() => openEdit(profile.data!.id)} data-testid="button-edit-profile">Edit member</button></div><div className="op-qr-card"><QRCodeSVG value={profile.data.qrToken} size={148} level="M" data-testid="qr-member-token" /><b>Member access card</b><small>Keep this code private.</small><button className="op-text-button" onClick={() => { if (window.confirm('Rotate this QR card? The current code will stop working.')) rotate.mutate({ memberId: profile.data!.id }, { onSuccess: async () => { await client.invalidateQueries({ queryKey: getGetMemberDetailQueryKey(profile.data!.id) }); setSuccess('QR access card rotated.'); }, onError: (error: unknown) => setFormError(serverError(error, 'QR card could not be rotated.')) }); }} disabled={rotate.isPending} data-testid="button-rotate-qr"><RefreshCw size={14} /> {rotate.isPending ? 'Rotating…' : 'Rotate QR card'}</button>{formError && <span className="op-error-inline">{formError}</span>}</div></div></>}</section></div>}
+    {mode === 'edit' && <div className="op-overlay"><section className="op-dialog op-edit-member-dialog"><button className="op-close" onClick={() => setMode(null)} aria-label="Close" data-testid="button-close-member-form"><X size={18}/></button><div className="op-modal-kicker">MEMBER DETAILS</div><h2>Edit member</h2><p>Update the member’s contact information.</p><form className="op-form" onSubmit={submit}><label>Full name<input value={name} onChange={e=>setName(e.target.value)} required minLength={2} maxLength={160}/></label><label>Phone number<input value={phone} onChange={e=>setPhone(e.target.value)} required minLength={9} maxLength={20}/></label><label>Email <span className="op-optional">Optional</span><input type="email" value={email} onChange={e=>setEmail(e.target.value)}/></label>{formError && <Notice error>{formError}</Notice>}<div className="op-form-actions"><button type="button" className="op-button op-light" onClick={()=>setMode(null)}>Cancel</button><button className="op-button op-primary" disabled={update.isPending}>Save changes</button></div></form><MemberSubscriptionEditor memberId={selected}/></section></div>}
+    {mode === 'new' && <div className="op-overlay op-wizard-overlay">
+      <section className="op-dialog op-registration-wizard" role="dialog" aria-modal="true" aria-labelledby="op-registration-title">
+        <div className="op-wizard-heading"><UserRound size={22}/><h2 id="op-registration-title">Register a new gym member</h2><button type="button" className="op-wizard-close" aria-label="Close registration" onClick={()=>setMode(null)}><X size={19}/></button></div>
+        <nav className="op-wizard-steps" aria-label="Registration steps">{(['Personal details','Fitness assessment','Membership'] as const).map((label,i)=><button key={label} type="button" className={`op-wizard-step ${wizardStep===i?'is-current':''} ${wizardStep>i?'is-past':''}`} onClick={()=>{if(i===0 || wizardStep!==0 || validatePersonal()) {setFormError('');setWizardStep(i);}}} aria-current={wizardStep===i?'step':undefined}><span>{i+1}. {label}</span><i/></button>)}</nav>
+        <form className="op-wizard-form" onSubmit={submitWizard}>
+          {wizardStep===0 && <div className="op-wizard-personal">
+            <label>Full name<input type="text" value={name} onChange={e=>setName(e.target.value)} required minLength={2} maxLength={160} placeholder="Full name" data-testid="input-member-name"/></label>
+            <label>Phone number<input type="tel" value={phone} onChange={e=>setPhone(e.target.value)} required placeholder="07XX XXX XXX" data-testid="input-member-phone"/></label>
+            <label>Email <span className="op-wizard-optional">Optional</span><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="name@example.com" data-testid="input-member-email"/></label>
+          </div>}
+          {wizardStep===1 && <div className="op-wizard-metrics">
+            {([['weightKg','Weight','kg'],['heightCm','Height','cm'],['bodyFatPercent','Body fat','%'],['musclePercent','Muscle','%'],['visceralFatLevel','Visceral fat','level']] as const).map(([key,label,unit])=><label key={key}>{label}<input type="number" min={key==='weightKg'||key==='heightCm'?'0.01':'0'} max={key==='weightKg'?'500':key==='heightCm'?'300':'100'} step="any" inputMode="decimal" placeholder={unit} value={measurements[key]} onChange={e=>setMeasurements(prev=>({...prev,[key]:e.target.value}))} data-testid={`input-fitness-${key}`}/></label>)}
+            <div className="op-wizard-bmi" aria-live="polite"><span>BMI</span><strong>{previewBmi==='—'?'Auto-calculated':previewBmi}</strong></div>
+          </div>}
+          {wizardStep===2 && <div className="op-wizard-membership">
+            <label>Membership plan <span className="op-wizard-optional">Optional</span><select value={wizardPlanId} onChange={e=>setWizardPlanId(e.target.value)} data-testid="select-registration-plan"><option value="">Assign a plan later</option>{wizardPlans.data?.filter(plan=>plan.isActive).map(plan=><option key={plan.id} value={plan.id}>{plan.name} — {money(plan.monthlyPriceKes)}</option>)}</select></label>
+            {wizardPlanId && <label>Membership starts on<input type="date" value={wizardStart} onChange={e=>setWizardStart(e.target.value)} required data-testid="input-registration-start"/></label>}
+            <p className="op-wizard-hint">{wizardPlanId?'A one-month subscription will be created after the member is registered.':'You can register now and assign a membership from Subscriptions later.'}</p>
+          </div>}
+          {formError && <div className="op-wizard-error" role="alert">{formError}</div>}
+          <div className="op-wizard-footer"><span>{wizardStep===1?'Optional during registration; recorded as the initial assessment':wizardStep===2?'Payment is recorded separately in Payments.':'Member registration'}</span><div className="op-wizard-buttons">{wizardStep>0 && <button type="button" className="op-wizard-back" disabled={wizardSaving} onClick={()=>{setFormError('');setWizardStep(wizardStep-1)}}>Back</button>}{wizardStep<2?<button type="button" className="op-wizard-next" onClick={()=>{if(wizardStep===0&&!validatePersonal()) return;setFormError('');setWizardStep(wizardStep+1)}}>Next step <ArrowRight size={18}/></button>:<button type="submit" className="op-wizard-next" disabled={wizardSaving||create.isPending||wizardSubscription.isPending} data-testid="button-save-member">{wizardSaving?'Registering…':'Register member'} <ArrowRight size={18}/></button>}</div></div>
+        </form>
+      </section>
+    </div>}
+    {mode === 'profile' && <div className="op-overlay"><section className="op-dialog op-profile-dialog"><button className="op-close" onClick={() => setMode(null)} aria-label="Close profile" data-testid="button-close-member-profile"><X size={18} /></button>{profile.isLoading ? <LoadingRows /> : profile.error || !profile.data ? <Notice error>Member profile unavailable. Close and try again.</Notice> : <><div className="op-modal-kicker">MEMBER PROFILE</div><h2>{profile.data.fullName}</h2><p>{profile.data.memberNumber} · Registered {date(profile.data.registeredAt)}</p><div className="op-profile-grid"><div className="op-profile-details"><div><small>Phone</small><b>{profile.data.phone}</b></div><div><small>Email</small><b>{profile.data.email || 'Not provided'}</b></div><div><small>Membership status</small><Status value={profile.data.status} /></div>{profile.data.latestAssessment && <div className="op-latest-assessment"><small>Initial/latest fitness assessment</small><b>{profile.data.latestAssessment.weightKg ?? '—'} kg · BMI {profile.data.latestAssessment.bmi ?? '—'}</b><small>Height: {profile.data.latestAssessment.heightCm ?? '—'} cm · Body fat: {profile.data.latestAssessment.bodyFatPercent ?? '—'}% · Muscle: {profile.data.latestAssessment.musclePercent ?? '—'}% · Visceral fat: {profile.data.latestAssessment.visceralFatLevel ?? '—'}</small></div>}<button className="op-button op-light" onClick={() => openEdit(profile.data!.id)} data-testid="button-edit-profile">Edit member</button></div><div className="op-qr-card"><QRCodeSVG value={profile.data.qrToken} size={148} level="M" data-testid="qr-member-token" /><b>Member access card</b><small>Keep this code private.</small><button className="op-text-button" onClick={() => { if (window.confirm('Rotate this QR card? The current code will stop working.')) rotate.mutate({ memberId: profile.data!.id }, { onSuccess: async () => { await client.invalidateQueries({ queryKey: getGetMemberDetailQueryKey(profile.data!.id) }); setSuccess('QR access card rotated.'); }, onError: (error: unknown) => setFormError(serverError(error, 'QR card could not be rotated.')) }); }} disabled={rotate.isPending} data-testid="button-rotate-qr"><RefreshCw size={14} /> {rotate.isPending ? 'Rotating…' : 'Rotate QR card'}</button>{formError && <span className="op-error-inline">{formError}</span>}</div></div><MemberFitnessPanel memberId={selected}/></>}</section></div>}
   </>;
+}
+
+// MYGYM_TASK5_ASSESSMENTS_V1
+interface AssessmentItem {
+  id: string;
+  recordedAt: string;
+  weightKg: number | null;
+  heightCm: number | null;
+  bmi: number | null;
+  bodyFatPercent: number | null;
+  musclePercent: number | null;
+  visceralFatLevel: number | null;
+}
+type AssessmentFields = 'weightKg'|'heightCm'|'bodyFatPercent'|'musclePercent'|'visceralFatLevel';
+const assessmentFields: {key:AssessmentFields;label:string;unit:string}[] = [
+  {key:'weightKg',label:'Weight',unit:'kg'}, {key:'heightCm',label:'Height',unit:'cm'},
+  {key:'bodyFatPercent',label:'Body fat',unit:'%'}, {key:'musclePercent',label:'Muscle',unit:'%'},
+  {key:'visceralFatLevel',label:'Visceral fat',unit:'level'},
+];
+const freshMeasurements = () => ({weightKg:'',heightCm:'',bodyFatPercent:'',musclePercent:'',visceralFatLevel:''});
+function MemberFitnessPanel({memberId}:{memberId:string}) {
+  const client = useQueryClient();
+  const [adding,setAdding] = useState(false);
+  const [values,setValues] = useState(freshMeasurements);
+  const [message,setMessage] = useState('');
+  const endpoint=`/api/members/${encodeURIComponent(memberId)}/fitness-assessments`;
+  const query=useQuery({
+    queryKey:['fitness-assessments',memberId],
+    queryFn:()=>customFetch<{items:AssessmentItem[]}>(endpoint,{responseType:'json'}),
+  });
+  const create=useMutation({
+    mutationFn:(data:Partial<Record<AssessmentFields,number>>)=>customFetch<AssessmentItem>(endpoint,{
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data),responseType:'json',
+    }),
+    onSuccess:async()=>{
+      setAdding(false);setValues(freshMeasurements());setMessage('Fitness assessment saved.');
+      await client.invalidateQueries({queryKey:['fitness-assessments',memberId]});
+      await client.invalidateQueries({queryKey:getGetMemberDetailQueryKey(memberId)});
+    },
+    onError:(err:unknown)=>setMessage(serverError(err,'Could not save assessment. Please retry.')),
+  });
+  const readings=query.data?.items??[];
+  const latest=readings[0];
+  const oldest=readings[readings.length-1];
+  const fmt=(v:number|null|undefined,unit='')=>v==null?'—':`${Number(v.toFixed(1))}${unit ? ' '+unit : ''}`;
+  const points=readings.slice().reverse().filter(r=>r.weightKg!=null);
+  const weights=points.map(r=>r.weightKg!);
+  const min=weights.length?Math.min(...weights):0, max=weights.length?Math.max(...weights):1;
+  const plotPoints=points.map((r,i)=>`${16+(points.length===1?0:i/(points.length-1)*500)},${108-(r.weightKg!-min)/(max-min||1)*84}`).join(' ');
+  const w=Number(values.weightKg),h=Number(values.heightCm);
+  const bmi=values.weightKg&&values.heightCm&&w>0&&h>0?(w/((h/100)**2)).toFixed(1):'—';
+  function submit(e:FormEvent){
+    e.preventDefault();setMessage('');
+    const entries=Object.entries(values).filter(([,v])=>v.trim()!=='');
+    if(!entries.length){setMessage('Enter at least one measurement.');return;}
+    const data=Object.fromEntries(entries.map(([k,v])=>[k,Number(v)]));
+    for(const [k,v] of entries){const n=Number(v);const maxVal=k==='heightCm'?300:k==='weightKg'?500:100;
+      if(!Number.isFinite(n)||n<(k==='weightKg'||k==='heightCm'?0.001:0)||n>maxVal){setMessage('Check the entered measurement ranges.');return;}}
+    create.mutate(data);
+  }
+  return <section className="op-fitness-section" data-testid="member-fitness-history">
+    <div className="op-fitness-heading"><div><h3>Fitness progress</h3><p>Measurements and reassessments</p></div>
+      <button type="button" className="op-button op-light" onClick={()=>{setAdding(v=>!v);setMessage('');}}>{adding?'Cancel':'Record assessment'}</button></div>
+    {message&&<p className="op-fitness-message" role="status">{message}</p>}
+    {adding&&<form className="op-fitness-form" onSubmit={submit}>
+      <div className="op-fitness-fields">{assessmentFields.map(f=><label key={f.key}>{f.label} ({f.unit})
+        <input type="number" step="any" min={f.key==='weightKg'||f.key==='heightCm'?'0.01':'0'}
+          max={f.key==='weightKg'?'500':f.key==='heightCm'?'300':'100'} placeholder="Optional"
+          value={values[f.key]} onChange={e=>setValues(p=>({...p,[f.key]:e.target.value}))}/>
+      </label>)}<div className="op-fitness-bmi"><span>BMI</span><strong>{bmi}</strong><small>Auto-calculated</small></div></div>
+      <div className="op-form-actions"><button type="submit" className="op-button op-primary" disabled={create.isPending}>{create.isPending?'Saving…':'Save assessment'}</button></div>
+    </form>}
+    {query.isLoading?<LoadingRows/>:query.isError?<p className="op-fitness-message">Could not load fitness history. <button type="button" onClick={()=>query.refetch()}>Retry</button></p>:
+      !latest?<p className="op-muted">No fitness assessments yet. Record the first measurements above.</p>:<>
+        <div className="op-fitness-kpis">{assessmentFields.map(f=><div key={f.key}><small>{f.label}</small><b>{fmt(latest[f.key],f.unit)}</b></div>)}<div><small>BMI</small><b>{fmt(latest.bmi)}</b></div></div>
+        {latest.weightKg!=null&&oldest?.weightKg!=null&&readings.length>1&&<p className="op-fitness-delta">Weight change since first assessment: <strong>{fmt(latest.weightKg-oldest.weightKg,'kg')}</strong></p>}
+        {points.length>1&&<div className="op-fitness-chart"><span>Weight trend (kg)</span><svg viewBox="0 0 532 124" role="img" aria-label="Weight progression over recorded assessments" preserveAspectRatio="none"><polyline points={plotPoints} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg></div>}
+        <div className="op-fitness-history"><h4>Assessment history</h4><div className="op-fitness-entries">{readings.map(r=><div key={r.id}><time>{date(r.recordedAt)}</time><span>{fmt(r.weightKg,'kg')} · BMI {fmt(r.bmi)} · Body fat {fmt(r.bodyFatPercent,'%')}</span></div>)}</div></div>
+      </>}
+  </section>;
+}
+
+// MYGYM_UPGRADE_V1 — member-scoped, staff-confirmed manual top-up.
+function MemberUpgradeForm({ current, memberId, plans, onSaved }: {
+  current: { id:string; planName:string; monthlyPriceKes:number; expiresOn:string };
+  memberId:string;
+  plans: Array<{id:string;name:string;monthlyPriceKes:number;isActive:boolean;scheduleConfigured:boolean}>;
+  onSaved:()=>Promise<unknown>;
+}) {
+  const [opened,setOpened]=useState(false);
+  const [target,setTarget]=useState('');
+  const [method,setMethod]=useState<'mpesa_manual'|'cash'|'bank_transfer'>('mpesa_manual');
+  const [reference,setReference]=useState('');
+  const [saving,setSaving]=useState(false);
+  const [error,setError]=useState('');
+  const [success,setSuccess]=useState('');
+  const available=plans.filter(p=>p.isActive&&p.scheduleConfigured&&p.monthlyPriceKes>current.monthlyPriceKes);
+  const selected=available.find(p=>p.id===target);
+  async function confirm(e:FormEvent){
+    e.preventDefault(); if(!selected||reference.trim().length<3||saving)return;
+    if(!window.confirm(`Upgrade ${current.planName} to ${selected.name} and record ${money(selected.monthlyPriceKes-current.monthlyPriceKes)} as a staff-confirmed payment?`))return;
+    setSaving(true);setError('');setSuccess('');
+    try {
+      await customFetch(`/api/members/${memberId}/subscriptions/${current.id}/upgrade`,{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({toPlanId:selected.id,method,reference:reference.trim()}),
+      });
+      setSuccess(`Upgrade recorded. Top-up: ${money(selected.monthlyPriceKes-current.monthlyPriceKes)}.`);
+      setOpened(false);setTarget('');setReference('');
+      await onSaved();
+    }catch(err){setError(serverError(err,'Could not upgrade membership. Check the plan and payment reference.'));}
+    finally{setSaving(false);}
+  }
+  return <div className="op-upgrade" aria-label="Upgrade membership">
+    <div className="op-upgrade-header"><div><h4>Upgrade membership</h4><p>Keep the existing expiry date and record the price difference.</p></div><button type="button" className="op-button op-light" onClick={()=>{setOpened(!opened);setError('')}}>{opened?'Close':'Upgrade plan'}</button></div>
+    {opened && (available.length===0?<p className="op-edit-subscription-muted">No higher-priced active plans with configured access hours. Activate the plan in Plans first.</p>:
+    <form className="op-form" onSubmit={confirm}>
+      <label>Upgrade to<select required value={target} onChange={e=>setTarget(e.target.value)}><option value="">Choose a higher-priced plan</option>{available.map(p=><option key={p.id} value={p.id}>{p.name} — {money(p.monthlyPriceKes)}</option>)}</select></label>
+      {selected&&<div className="op-upgrade-quote"><span>Current: {money(current.monthlyPriceKes)}</span><span>New: {money(selected.monthlyPriceKes)}</span><strong>Top-up: {money(selected.monthlyPriceKes-current.monthlyPriceKes)}</strong><small>Expires {date(current.expiresOn)} — unchanged</small></div>}
+      <label>Payment method<select value={method} onChange={e=>setMethod(e.target.value as typeof method)}><option value="mpesa_manual">Manual M-Pesa</option><option value="cash">Cash</option><option value="bank_transfer">Bank transfer</option></select></label>
+      <label>{method==='mpesa_manual'?'M-Pesa transaction reference':method==='cash'?'Cash receipt number':'Bank reference'}<input required minLength={3} maxLength={80} value={reference} onChange={e=>setReference(e.target.value)} placeholder="Staff-recorded reference" /></label>
+      <p className="op-edit-subscription-muted">Staff must confirm receipt. M-Pesa references are not automatically verified.</p>
+      {error&&<p className="op-edit-subscription-error" role="alert">{error}</p>}
+      <div className="op-form-actions"><button className="op-button op-primary" type="submit" disabled={saving||!selected||reference.trim().length<3}>{saving?'Processing…':'Confirm upgrade & top-up'}</button></div>
+    </form>)}
+    {success&&<p className="op-edit-subscription-success" role="status">{success}</p>}
+  </div>;
+}
+
+// MYGYM_EDIT_MEMBER_SUBSCRIPTIONS_V1
+// Existing subscriptions are immutable. A new term must not overlap one already present.
+function MemberSubscriptionEditor({memberId}:{memberId:string}) {
+  const client=useQueryClient();
+  const [planId,setPlanId]=useState('');
+  const [startsOn,setStartsOn]=useState(todayInNairobi);
+  const [error,setError]=useState('');
+  const [success,setSuccess]=useState('');
+  const subscriptions=useListSubscriptions({memberId,page:1,pageSize:50});
+  const plans=useListMembershipPlans();
+  const create=useCreateSubscription();
+  const entries=subscriptions.data?.items||[];
+  const current=entries.find(s=>s.status==='active') || entries.find(s=>s.status==='scheduled');
+  function submit(e:FormEvent){
+    e.preventDefault();setError('');setSuccess('');
+    if(!planId||!startsOn){setError('Select a plan and start date.');return;}
+    create.mutate({memberId,data:{planId,startsOn}}, {
+      onSuccess:async()=>{
+        setPlanId('');setSuccess('Membership term created successfully.');
+        await client.invalidateQueries({queryKey:getListSubscriptionsQueryKey()});
+      },
+      onError:(err:unknown)=>setError(serverError(err,'Could not create this membership term. Check the dates and try again.')),
+    });
+  }
+  return <section className="op-edit-subscriptions" aria-label="Membership details">
+    <div className="op-edit-subscriptions-heading"><h3>Membership details</h3><span>Subscriptions</span></div>
+    {subscriptions.isLoading?<p className="op-edit-subscription-muted">Loading membership details…</p>:
+      subscriptions.isError?<p className="op-edit-subscription-error">Could not load membership details. <button type="button" onClick={()=>subscriptions.refetch()}>Retry</button></p>:
+      current?<div className="op-edit-subscription-current">
+        <div><small>{current.status==='active'?'Current membership':'Upcoming membership'}</small><strong>{current.planName}</strong></div>
+        <div><small>Price</small><strong>{money(current.monthlyPriceKes)}</strong></div>
+        <div><small>Period</small><strong>{date(current.startsOn)} – {date(current.expiresOn)}</strong></div>
+        <span className="op-edit-subscription-status">{current.status}</span>
+      </div>:<p className="op-edit-subscription-muted">No active or upcoming membership.</p>}
+    {entries.length>1&&<p className="op-edit-subscription-muted">{entries.length} membership terms on record. Full history is available under Subscriptions.</p>}
+    {current && (current.status === 'active' || current.status === 'scheduled') && <MemberUpgradeForm current={current} memberId={memberId} plans={plans.data||[]} onSaved={async()=>{await Promise.all([subscriptions.refetch(),client.invalidateQueries({queryKey:getListSubscriptionsQueryKey()}),client.invalidateQueries({queryKey:getListPaymentsQueryKey()})]);}}/>}
+    <form className="op-form op-edit-subscription-form" onSubmit={submit}>
+      <h4>Start or renew membership</h4>
+      <label>Membership plan<select value={planId} onChange={e=>setPlanId(e.target.value)} required disabled={plans.isLoading||create.isPending}>
+        <option value="">Choose an active plan</option>
+        {plans.data?.filter(p=>p.isActive).map(p=><option key={p.id} value={p.id}>{p.name} — {money(p.monthlyPriceKes)}</option>)}
+      </select></label>
+      <label>Membership starts on<input type="date" value={startsOn} onChange={e=>setStartsOn(e.target.value)} required disabled={create.isPending}/></label>
+      <p className="op-edit-subscription-muted">Existing terms are preserved. New dates cannot overlap an existing subscription; payments remain separate.</p>
+      {error&&<p className="op-edit-subscription-error" role="alert">{error}</p>}
+      {success&&<p className="op-edit-subscription-success" role="status">{success}</p>}
+      <div className="op-form-actions"><button className="op-button op-primary" type="submit" disabled={create.isPending||plans.isLoading||subscriptions.isLoading}>{create.isPending?'Saving…':'Save membership term'}</button></div>
+    </form>
+  </section>;
 }
 
 export function PlansPage() { return <StaffFrame active="membership-plans"><Plans /></StaffFrame>; }

@@ -1035,10 +1035,31 @@ components:
     CheckInSource:
       type: string
       enum: [qr, manual]
+    FitnessAssessmentInput:
+      type: object
+      properties:
+        weightKg: { type: [number, "null"], exclusiveMinimum: 0, maximum: 500 }
+        heightCm: { type: [number, "null"], exclusiveMinimum: 0, maximum: 300 }
+        bodyFatPercent: { type: [number, "null"], minimum: 0, maximum: 100 }
+        musclePercent: { type: [number, "null"], minimum: 0, maximum: 100 }
+        visceralFatLevel: { type: [number, "null"], minimum: 0, maximum: 100 }
+    FitnessAssessmentResponse:
+      allOf:
+        - $ref: "#/components/schemas/FitnessAssessmentInput"
+        - type: object
+          required: [id, recordedAt]
+          properties:
+            id: { type: string, format: uuid }
+            recordedAt: { type: string, format: date-time }
+            bmi: { type: [number, "null"] }
     MemberInput:
       type: object
       required: [fullName, phone]
       properties:
+        initialAssessment:
+          anyOf:
+            - $ref: "#/components/schemas/FitnessAssessmentInput"
+            - type: "null"
         fullName:
           type: string
           minLength: 2
@@ -1098,6 +1119,10 @@ components:
         - type: object
           required: [qrToken]
           properties:
+            latestAssessment:
+              anyOf:
+                - $ref: "#/components/schemas/FitnessAssessmentResponse"
+                - type: "null"
             qrToken:
               type: string
               minLength: 32

@@ -22,6 +22,12 @@ tags:
     description: Staff-recorded payments
   - name: attendance
     description: QR and manual attendance workflows
+  - name: workspaces
+    description: Role-specific staff workspace data
+  - name: workouts
+    description: Trainer workout programs, assignments and private resources
+  - name: events
+    description: Gym classes, events and staff-managed registrations
 paths:
   /healthz:
     get:
@@ -926,6 +932,644 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [workspaces]
+      summary: Get role-specific dashboard data
+      responses:
+        "200":
+          description: Current staff dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+        "401":
+          description: Staff sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /trainer/members:
+    get:
+      operationId: listTrainerMembers
+      tags: [workspaces]
+      summary: List active member fitness profiles
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 120
+      responses:
+        "200":
+          description: Fitness-focused member records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TrainerMember"
+        "403":
+          description: Owner or trainer access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /staff:
+    get:
+      operationId: listStaff
+      tags: [staff]
+      summary: List staff accounts
+      responses:
+        "200":
+          description: Staff accounts for the gym
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StaffMember"
+        "403":
+          description: Owner access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    post:
+      operationId: createStaff
+      tags: [staff]
+      summary: Assign a role to a verified sign-in account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StaffCreateInput"
+      responses:
+        "201":
+          description: Staff role assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffMember"
+        "403":
+          description: Owner access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Account already assigned or conflicting
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /staff/{staffId}:
+    patch:
+      operationId: updateStaff
+      tags: [staff]
+      summary: Change a staff role or status
+      parameters:
+        - name: staffId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StaffUpdateInput"
+      responses:
+        "200":
+          description: Updated staff account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffMember"
+        "403":
+          description: Owner access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Cannot remove or deactivate the last active owner
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /workouts:
+    get:
+      operationId: listWorkoutPrograms
+      tags: [workouts]
+      summary: List workout templates
+      parameters:
+        - name: includeArchived
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Workout templates with exercises and resources
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkoutProgram"
+        "403":
+          description: Owner or trainer access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    post:
+      operationId: createWorkoutProgram
+      tags: [workouts]
+      summary: Create a workout template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkoutProgramInput"
+      responses:
+        "201":
+          description: Workout template created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkoutProgram"
+        "403":
+          description: Owner or trainer access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /workouts/{programId}:
+    patch:
+      operationId: updateWorkoutProgram
+      tags: [workouts]
+      summary: Update or archive a workout template
+      parameters:
+        - name: programId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkoutProgramUpdate"
+      responses:
+        "200":
+          description: Updated workout template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkoutProgram"
+        "403":
+          description: Owner or trainer access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /workout-assignments:
+    get:
+      operationId: listWorkoutAssignments
+      tags: [workouts]
+      summary: List workout assignments
+      parameters:
+        - name: memberId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Workout assignments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkoutAssignment"
+        "403":
+          description: Owner or trainer access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /workouts/{programId}/assignments:
+    post:
+      operationId: assignWorkoutProgram
+      tags: [workouts]
+      summary: Assign a workout template to a member
+      parameters:
+        - name: programId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkoutAssignmentInput"
+      responses:
+        "201":
+          description: Workout assignment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkoutAssignment"
+        "409":
+          description: Duplicate active assignment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /workout-assignments/{assignmentId}:
+    patch:
+      operationId: updateWorkoutAssignment
+      tags: [workouts]
+      summary: Update a workout assignment status or note
+      parameters:
+        - name: assignmentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkoutAssignmentUpdate"
+      responses:
+        "200":
+          description: Updated workout assignment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkoutAssignment"
+  /workouts/{programId}/resources:
+    post:
+      operationId: uploadWorkoutResource
+      tags: [workouts]
+      summary: Upload a private PDF or image resource
+      parameters:
+        - name: programId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: x-file-name
+          in: header
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "201":
+          description: Private resource stored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkoutResource"
+        "413":
+          description: Upload exceeds 10 MB
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "415":
+          description: Unsupported file contents
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /workout-resources/{resourceId}/download:
+    get:
+      operationId: downloadWorkoutResource
+      tags: [workouts]
+      summary: Download a private workout resource
+      parameters:
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Private file
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "403":
+          description: Owner or trainer access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /events:
+    get:
+      operationId: listEvents
+      tags: [events]
+      summary: List upcoming or past gym events
+      parameters:
+        - name: timeframe
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [upcoming, past]
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/EventStatus"
+      responses:
+        "200":
+          description: Staff-visible events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GymEvent"
+    post:
+      operationId: createEvent
+      tags: [events]
+      summary: Create an event or gym class
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventInput"
+      responses:
+        "201":
+          description: Event created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GymEvent"
+        "403":
+          description: Owner or trainer access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /events/instructors:
+    get:
+      operationId: listEventInstructors
+      tags: [events]
+      summary: List active owners and trainers
+      responses:
+        "200":
+          description: Active instructor options
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EventInstructor"
+  /events/members:
+    get:
+      operationId: searchEventMembers
+      tags: [events]
+      summary: Search active members for event registration
+      parameters:
+        - name: search
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 120
+      responses:
+        "200":
+          description: Minimal matching active member identities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EventMember"
+  /events/{eventId}:
+    get:
+      operationId: getEvent
+      tags: [events]
+      summary: Get event details
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Event details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GymEvent"
+    patch:
+      operationId: updateEvent
+      tags: [events]
+      summary: Edit, publish or cancel an event
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventUpdate"
+      responses:
+        "200":
+          description: Updated event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GymEvent"
+        "409":
+          description: Capacity is below existing confirmed bookings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /events/{eventId}/registrations:
+    get:
+      operationId: listEventRegistrations
+      tags: [events]
+      summary: List event registrations
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Member bookings for the event
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EventRegistration"
+    post:
+      operationId: registerMemberForEvent
+      tags: [events]
+      summary: Register an active member for a published event
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventRegistrationInput"
+      responses:
+        "201":
+          description: Member registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventRegistration"
+        "409":
+          description: Event full, closed, or duplicate registration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /events/{eventId}/registrations/{registrationId}:
+    delete:
+      operationId: cancelEventRegistration
+      tags: [events]
+      summary: Cancel a member registration
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: registrationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Registration cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventRegistration"
+  /events/{eventId}/cover:
+    post:
+      operationId: uploadEventCover
+      tags: [events]
+      summary: Upload a private event cover image
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: x-file-name
+          in: header
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Event cover uploaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GymEvent"
+        "415":
+          description: Unsupported image contents
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    get:
+      operationId: downloadEventCover
+      tags: [events]
+      summary: Read a private event cover image
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Private event image
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
 components:
   securitySchemes:
     clerkSession:
@@ -1508,6 +2152,272 @@ components:
           type: integer
         pageSize:
           type: integer
+    StaffRole:
+      type: string
+      enum: [owner, receptionist, trainer]
+    StaffMember:
+      type: object
+      required: [id, name, email, role, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        email: { type: string, format: email }
+        role: { $ref: "#/components/schemas/StaffRole" }
+        status: { type: string, enum: [active, inactive] }
+        createdAt: { type: string, format: date-time }
+    StaffCreateInput:
+      type: object
+      required: [email, role]
+      properties:
+        email: { type: string, format: email, minLength: 5, maxLength: 320 }
+        role: { type: string, enum: [receptionist, trainer] }
+    StaffUpdateInput:
+      type: object
+      minProperties: 1
+      properties:
+        role: { type: string, enum: [receptionist, trainer] }
+        status: { type: string, enum: [active, inactive] }
+    AttendanceDay:
+      type: object
+      required: [day, checkIns]
+      properties:
+        day: { type: string, format: date }
+        checkIns: { type: integer, minimum: 0 }
+    ExpiringMembership:
+      type: object
+      required: [memberId, memberNumber, fullName, expiresOn, daysRemaining]
+      properties:
+        memberId: { type: string, format: uuid }
+        memberNumber: { type: string }
+        fullName: { type: string }
+        expiresOn: { type: string, format: date }
+        daysRemaining: { type: integer, minimum: 0 }
+    TrainerMember:
+      type: object
+      required: [id, memberNumber, fullName, status, assessmentCount]
+      properties:
+        id: { type: string, format: uuid }
+        memberNumber: { type: string }
+        fullName: { type: string }
+        status: { $ref: "#/components/schemas/MemberStatus" }
+        assessmentCount: { type: integer, minimum: 0 }
+        latestAssessment:
+          anyOf:
+            - $ref: "#/components/schemas/FitnessAssessmentHistoryItem"
+            - type: "null"
+    FitnessAssessmentHistoryItem:
+      type: object
+      required: [id, recordedAt, weightKg, heightCm, bmi, bodyFatPercent, musclePercent, visceralFatLevel]
+      properties:
+        id: { type: string, format: uuid }
+        recordedAt: { type: string, format: date-time }
+        weightKg: { type: [number, "null"] }
+        heightCm: { type: [number, "null"] }
+        bmi: { type: [number, "null"] }
+        bodyFatPercent: { type: [number, "null"] }
+        musclePercent: { type: [number, "null"] }
+        visceralFatLevel: { type: [number, "null"] }
+    DashboardSummary:
+      type: object
+      required: [role, membershipsExpiring, attendanceTrend, upcomingEvents]
+      properties:
+        role: { $ref: "#/components/schemas/StaffRole" }
+        activeMembers: { type: [integer, "null"] }
+        newMembersLast30Days: { type: [integer, "null"] }
+        revenueThisMonthKes: { type: [integer, "null"] }
+        paymentsThisMonth: { type: [integer, "null"] }
+        membershipsExpiring:
+          type: array
+          items: { $ref: "#/components/schemas/ExpiringMembership" }
+        inactiveMembers: { type: [integer, "null"] }
+        checkInsToday: { type: [integer, "null"] }
+        attendanceTrend:
+          type: array
+          items: { $ref: "#/components/schemas/AttendanceDay" }
+        staffCount: { type: [integer, "null"] }
+        trainerMemberCount: { type: [integer, "null"] }
+        recentAssessments: { type: [integer, "null"] }
+        assignedWorkouts: { type: [integer, "null"] }
+        upcomingEvents:
+          type: array
+          items: { $ref: "#/components/schemas/GymEvent" }
+    WorkoutStatus:
+      type: string
+      enum: [active, archived]
+    WorkoutAssignmentStatus:
+      type: string
+      enum: [assigned, in_progress, completed, cancelled]
+    WorkoutExerciseInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 120 }
+        sets: { type: integer, minimum: 1, maximum: 50, default: 1 }
+        repetitions: { type: [integer, "null"], minimum: 1, maximum: 1000 }
+        durationSeconds: { type: [integer, "null"], minimum: 1, maximum: 86400 }
+        restSeconds: { type: [integer, "null"], minimum: 0, maximum: 3600 }
+    WorkoutExercise:
+      allOf:
+        - $ref: "#/components/schemas/WorkoutExerciseInput"
+        - type: object
+          required: [id, position, sets, repetitions, durationSeconds, restSeconds]
+          properties:
+            id: { type: string, format: uuid }
+            position: { type: integer, minimum: 0 }
+    WorkoutResource:
+      type: object
+      required: [id, originalFilename, mediaType, sizeBytes, createdAt, downloadUrl]
+      properties:
+        id: { type: string, format: uuid }
+        originalFilename: { type: string }
+        mediaType: { type: string }
+        sizeBytes: { type: integer, minimum: 1, maximum: 10485760 }
+        createdAt: { type: string, format: date-time }
+        downloadUrl: { type: string }
+    WorkoutProgramInput:
+      type: object
+      required: [name, goal, exercises]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 120 }
+        goal: { type: string, minLength: 2, maxLength: 200 }
+        description: { type: [string, "null"], maxLength: 4000 }
+        exercises:
+          type: array
+          minItems: 1
+          maxItems: 30
+          items: { $ref: "#/components/schemas/WorkoutExerciseInput" }
+    WorkoutProgramUpdate:
+      type: object
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 2, maxLength: 120 }
+        goal: { type: string, minLength: 2, maxLength: 200 }
+        description: { type: [string, "null"], maxLength: 4000 }
+        status: { $ref: "#/components/schemas/WorkoutStatus" }
+        exercises:
+          type: array
+          minItems: 1
+          maxItems: 30
+          items: { $ref: "#/components/schemas/WorkoutExerciseInput" }
+    WorkoutProgram:
+      type: object
+      required: [id, name, goal, description, status, createdAt, updatedAt, exercises, resources]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        goal: { type: string }
+        description: { type: [string, "null"] }
+        status: { $ref: "#/components/schemas/WorkoutStatus" }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        exercises:
+          type: array
+          items: { $ref: "#/components/schemas/WorkoutExercise" }
+        resources:
+          type: array
+          items: { $ref: "#/components/schemas/WorkoutResource" }
+    WorkoutAssignmentInput:
+      type: object
+      required: [memberId, startsOn]
+      properties:
+        memberId: { type: string, format: uuid }
+        startsOn: { type: string, format: date }
+        notes: { type: [string, "null"], maxLength: 1000 }
+    WorkoutAssignmentUpdate:
+      type: object
+      minProperties: 1
+      properties:
+        status: { $ref: "#/components/schemas/WorkoutAssignmentStatus" }
+        notes: { type: [string, "null"], maxLength: 1000 }
+    WorkoutAssignment:
+      type: object
+      required: [id, programId, programName, goal, memberId, memberNumber, memberName, startsOn, status, notes, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        programId: { type: string, format: uuid }
+        programName: { type: string }
+        goal: { type: string }
+        memberId: { type: string, format: uuid }
+        memberNumber: { type: string }
+        memberName: { type: string }
+        startsOn: { type: string, format: date }
+        status: { $ref: "#/components/schemas/WorkoutAssignmentStatus" }
+        notes: { type: [string, "null"] }
+        createdAt: { type: string, format: date-time }
+    EventStatus:
+      type: string
+      enum: [draft, published, cancelled]
+    EventInstructor:
+      type: object
+      required: [id, name, role]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        role: { type: string, enum: [owner, trainer] }
+    EventMember:
+      type: object
+      required: [id, memberNumber, fullName, status]
+      properties:
+        id: { type: string, format: uuid }
+        memberNumber: { type: string }
+        fullName: { type: string }
+        status: { $ref: "#/components/schemas/MemberStatus" }
+    EventInput:
+      type: object
+      required: [name, startsAt, endsAt, capacity]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 140 }
+        description: { type: [string, "null"], maxLength: 4000 }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        capacity: { type: integer, minimum: 1, maximum: 10000 }
+        instructorStaffId: { type: [string, "null"], format: uuid }
+        status: { $ref: "#/components/schemas/EventStatus", default: draft }
+    EventUpdate:
+      type: object
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 2, maxLength: 140 }
+        description: { type: [string, "null"], maxLength: 4000 }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        capacity: { type: integer, minimum: 1, maximum: 10000 }
+        instructorStaffId: { type: [string, "null"], format: uuid }
+        status: { $ref: "#/components/schemas/EventStatus" }
+    GymEvent:
+      type: object
+      required: [id, name, description, startsAt, endsAt, capacity, instructorStaffId, instructorName, status, registeredCount, remainingSlots, coverUrl, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: [string, "null"] }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        capacity: { type: integer }
+        instructorStaffId: { type: [string, "null"], format: uuid }
+        instructorName: { type: [string, "null"] }
+        status: { $ref: "#/components/schemas/EventStatus" }
+        registeredCount: { type: integer, minimum: 0 }
+        remainingSlots: { type: integer, minimum: 0 }
+        coverUrl: { type: [string, "null"] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    EventRegistrationInput:
+      type: object
+      required: [memberId]
+      properties:
+        memberId: { type: string, format: uuid }
+    EventRegistration:
+      type: object
+      required: [id, eventId, memberId, memberNumber, memberName, status, registeredAt]
+      properties:
+        id: { type: string, format: uuid }
+        eventId: { type: string, format: uuid }
+        memberId: { type: string, format: uuid }
+        memberNumber: { type: string }
+        memberName: { type: string }
+        status: { type: string, enum: [confirmed, cancelled] }
+        registeredAt: { type: string, format: date-time }
     ApiError:
       type: object
       required: [error, code]

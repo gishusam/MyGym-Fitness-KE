@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from backend.app.core.auth import get_current_staff, require_owner
+from backend.app.core.auth import require_owner, require_owner_or_receptionist
 from backend.app.db.session import get_db
 from backend.app.models.audit_log import AuditLog
 from backend.app.models.gym_settings import GymSettings
@@ -28,7 +28,7 @@ def _get_settings(session: Session) -> GymSettings:
 
 @router.get("", operation_id="getGymSettings", response_model=GymSettingsResponse)
 def read_gym_settings(
-    _staff: StaffUser = Depends(get_current_staff),
+    _staff: StaffUser = Depends(require_owner_or_receptionist),
     session: Session = Depends(get_db),
 ) -> GymSettings:
     return _get_settings(session)

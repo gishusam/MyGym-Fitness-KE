@@ -5,9 +5,11 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { FitnessAssessmentResponse } from './fitnessAssessmentResponse';
 import type { MemberSummary } from './memberSummary';
 
-export type MemberDetail = MemberSummary & {
+export type MemberDetail = MemberSummary & ({
+  latestAssessment?: FitnessAssessmentResponse | null;
   /** @minLength 32 */
   qrToken: string;
-};
+});

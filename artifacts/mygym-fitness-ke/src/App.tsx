@@ -5,9 +5,9 @@ import { publishableKeyFromHost } from '@clerk/react/internal';
 import { shadcn } from '@clerk/themes';
 import {
   Activity, ArrowDownRight, ArrowRight, ArrowUpRight, Check, CheckCircle2, CreditCard,
-  ChevronRight, CircleHelp, Clock3, Dumbbell, ExternalLink, Fingerprint,
-  Gauge, LoaderCircle, LogOut, MapPin, Settings2, ShieldCheck, SlidersHorizontal,
-  QrCode, Sparkles, UsersRound, Wallet, Wifi, XCircle,
+  CalendarDays, ChevronRight, CircleHelp, ClipboardList, Clock3, Dumbbell, ExternalLink,
+  Fingerprint, Gauge, LoaderCircle, LogOut, MapPin, Settings2, ShieldCheck,
+  SlidersHorizontal, QrCode, Sparkles, UserCog, UsersRound, Wallet, Wifi, XCircle,
 } from 'lucide-react';
 import { Link, Redirect, Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import {
@@ -21,6 +21,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import { AttendancePage, MembersPage, PaymentsPage, PlansPage, SubscriptionsPage } from '@/pages/operations';
+import { EventsPage, StaffManagementPage, TrainerMembersPage, WorkoutsPage, WorkspaceOverview } from '@/pages/workspaces';
 import './index.css';
 
 const queryClient = new QueryClient();
@@ -168,6 +169,32 @@ function AppShell({ staff, children }: { staff: CurrentStaff; children: ReactNod
   const { signOut } = useClerk();
   const [location] = useLocation();
   const role = staff.role.charAt(0).toUpperCase() + staff.role.slice(1);
+  const navigation = staff.role === 'trainer'
+    ? [
+        { href: '/dashboard', label: 'Overview', Icon: Gauge },
+        { href: '/trainer/members', label: 'Fitness members', Icon: UsersRound },
+        { href: '/workouts', label: 'Workouts', Icon: ClipboardList },
+        { href: '/events', label: 'Events', Icon: CalendarDays },
+      ]
+    : [
+        { href: '/dashboard', label: 'Overview', Icon: Gauge },
+        { href: '/members', label: 'Members', Icon: UsersRound },
+        { href: '/membership-plans', label: 'Plans', Icon: Dumbbell },
+        { href: '/subscriptions', label: 'Subscriptions', Icon: CreditCard },
+        { href: '/payments', label: 'Payments', Icon: Wallet },
+        { href: '/attendance', label: 'Attendance', Icon: QrCode },
+        ...(staff.role === 'owner'
+          ? [{ href: '/workouts', label: 'Workouts', Icon: ClipboardList }]
+          : []),
+        { href: '/events', label: 'Events', Icon: CalendarDays },
+        ...(staff.role === 'owner'
+          ? [{ href: '/staff', label: 'Staff', Icon: UserCog }]
+          : []),
+        ...(staff.role === 'owner'
+          ? [{ href: '/settings/gym', label: 'Gym settings', Icon: Settings2 }]
+          : []),
+      ];
+  const currentLabel = navigation.find((item) => item.href === location)?.label ?? 'Overview';
   return (
     <div className="app-frame">
       <aside className="sidebar">
@@ -176,13 +203,12 @@ function AppShell({ staff, children }: { staff: CurrentStaff; children: ReactNod
         <div className="gym-switcher"><span className="gym-avatar"><Dumbbell size={18} /></span><span><b>Gym operations</b><small>Staff workspace</small></span><ChevronRight size={15} /></div>
         <div className="nav-label">YOUR SPACE</div>
         <nav className="side-nav" aria-label="Main navigation">
-          <Link href="/dashboard" className={`nav-item ${location === '/dashboard' ? 'selected' : ''}`} data-testid="link-dashboard"><Gauge size={17} /><span>Overview</span></Link>
-          <Link href="/members" className={`nav-item ${location === '/members' ? 'selected' : ''}`} data-testid="link-members"><UsersRound size={17} /><span>Members</span></Link>
-          <Link href="/membership-plans" className={`nav-item ${location === '/membership-plans' ? 'selected' : ''}`} data-testid="link-membership-plans"><Dumbbell size={17} /><span>Plans</span></Link>
-          <Link href="/subscriptions" className={`nav-item ${location === '/subscriptions' ? 'selected' : ''}`} data-testid="link-subscriptions"><CreditCard size={17} /><span>Subscriptions</span></Link>
-          <Link href="/payments" className={`nav-item ${location === '/payments' ? 'selected' : ''}`} data-testid="link-payments"><Wallet size={17} /><span>Payments</span></Link>
-          <Link href="/attendance" className={`nav-item ${location === '/attendance' ? 'selected' : ''}`} data-testid="link-attendance"><QrCode size={17} /><span>Attendance</span></Link>
-          <Link href="/settings/gym" className={`nav-item ${location === '/settings/gym' ? 'selected' : ''}`} data-testid="link-gym-settings"><Settings2 size={17} /><span>Gym settings</span><span className="nav-owner">OWNER</span></Link>
+          {navigation.map(({ href, label, Icon }) => (
+            <Link key={href} href={href} className={`nav-item ${location === href ? 'selected' : ''}`} data-testid={`link-${href.replaceAll('/', '-').replace(/^-/, '')}`}>
+              <Icon size={17} /><span>{label}</span>
+              {href === '/settings/gym' && <span className="nav-owner">OWNER</span>}
+            </Link>
+          ))}
         </nav>
         <div className="sidebar-bottom">
           <div className="help-card"><div className="help-icon"><CircleHelp size={17} /></div><b>Need a hand?</b><p>Your gym owner can help with access and setup.</p></div>
@@ -190,7 +216,7 @@ function AppShell({ staff, children }: { staff: CurrentStaff; children: ReactNod
         </div>
       </aside>
       <div className="app-main">
-        <header className="topbar"><div className="breadcrumbs"><span>MyGym</span><ChevronRight size={14} /><b>{location === '/settings/gym' ? 'Gym settings' : 'Overview'}</b></div><div className="topbar-actions"><span className="topbar-status"><span className="status-dot" /> Staff workspace</span><span className="topbar-avatar">{initials(staff.name)}</span></div></header>
+        <header className="topbar"><div className="breadcrumbs"><span>MyGym</span><ChevronRight size={14} /><b>{currentLabel}</b></div><div className="topbar-actions"><span className="topbar-status"><span className="status-dot" /> Staff workspace</span><span className="topbar-avatar">{initials(staff.name)}</span></div></header>
         <main className="content-area page-enter">{children}</main>
       </div>
     </div>
@@ -211,7 +237,6 @@ function Notice({ kind = 'error', title, detail, action }: { kind?: 'error' | 'i
 
 function StaffDashboard() {
   const staffQuery = useGetCurrentStaff({ query: { queryKey: getGetCurrentStaffQueryKey() } });
-  const settingsQuery = useGetGymSettings({ query: { queryKey: getGetGymSettingsQueryKey(), enabled: !!staffQuery.data } });
   const healthQuery = useHealthCheck({ query: { queryKey: getHealthCheckQueryKey(), refetchInterval: 60000 } });
 
   if (staffQuery.isLoading) return <LoadingPage />;
@@ -224,12 +249,8 @@ function StaffDashboard() {
 
   return (
     <AppShell staff={staff}>
-      <div className="page-heading"><div><div className="eyebrow"><span className="eyebrow-line" /> STAFF OVERVIEW</div><h1>Good to see you, {staff.name.split(' ')[0] || 'there'}.</h1><p>Your gym workspace is ready. Here’s the setup at a glance.</p></div><div className="heading-date"><span className="small-cap">TODAY</span><b>{new Intl.DateTimeFormat('en-KE', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())}</b></div></div>
-      {healthQuery.isError && <Notice title="Some services may be unavailable" detail="The app could not confirm service health. You can still review your staff profile and settings." />}
-      {isUnauthorized(settingsQuery.error) ? <Notice title="Your staff session needs attention" detail="Gym settings could not confirm your session. Sign out and sign in again before continuing." action={<SessionSignOut />} /> :
-       isForbidden(settingsQuery.error) ? <Notice title="Gym setup isn't available to your account" detail="Ask the gym owner to confirm your access. Your staff profile is active, but gym setup needs an assigned permission." /> :
-        settingsQuery.isError ? <Notice title="Gym setup couldn't load" detail="Your staff profile is available, but we couldn't retrieve gym settings." action={<button className="text-action" onClick={() => settingsQuery.refetch()} data-testid="button-retry-gym-settings">Retry settings <ArrowRight size={14} /></button>} /> :
-          settingsQuery.isLoading ? <div className="skeleton dashboard-skeleton" /> : settingsQuery.data ? <DashboardContent staff={staff} settings={settingsQuery.data} health={healthQuery.data?.status} /> : <EmptySetup />}
+      {healthQuery.isError && <Notice title="Some services may be unavailable" detail="The app could not confirm service health. Your workspace data can still be reviewed." />}
+      <WorkspaceOverview staff={staff} />
       <div className="dashboard-footer"><span>Signed in as <b>{staff.email}</b></span><span><ShieldCheck size={14} /> Private staff workspace</span></div>
     </AppShell>
   );
@@ -274,6 +295,7 @@ function GymSettingsPage() {
   if (isUnauthorized(staffQuery.error)) return <SessionExpired />;
   if (isForbidden(staffQuery.error)) return <Redirect to="/access-pending" />;
   if (staffQuery.error || !staffQuery.data) return <div className="centered-state"><Notice title="Staff access couldn't be confirmed" detail="Please try again. Your settings are unchanged." action={<button className="text-action" onClick={() => staffQuery.refetch()} data-testid="button-retry-settings-staff">Try again <ArrowRight size={14} /></button>} /></div>;
+  if (staffQuery.data.role === 'trainer') return <Redirect to="/dashboard" />;
   if (staffQuery.data.status === 'inactive') return <AppShell staff={staffQuery.data}><Notice title="Your staff access is inactive" detail="Please ask your gym owner to reactivate your account." /></AppShell>;
   return <SettingsContent staff={staffQuery.data} />;
 }
@@ -517,6 +539,10 @@ function RoutedPages() {
     <Route path="/subscriptions"><Show when="signed-in"><SubscriptionsPage /></Show><Show when="signed-out"><Redirect to="/" /></Show></Route>
     <Route path="/payments"><Show when="signed-in"><PaymentsPage /></Show><Show when="signed-out"><Redirect to="/" /></Show></Route>
     <Route path="/attendance"><Show when="signed-in"><AttendancePage /></Show><Show when="signed-out"><Redirect to="/" /></Show></Route>
+    <Route path="/trainer/members"><Show when="signed-in"><TrainerMembersPage /></Show><Show when="signed-out"><Redirect to="/" /></Show></Route>
+    <Route path="/workouts"><Show when="signed-in"><WorkoutsPage /></Show><Show when="signed-out"><Redirect to="/" /></Show></Route>
+    <Route path="/events"><Show when="signed-in"><EventsPage /></Show><Show when="signed-out"><Redirect to="/" /></Show></Route>
+    <Route path="/staff"><Show when="signed-in"><StaffManagementPage /></Show><Show when="signed-out"><Redirect to="/" /></Show></Route>
     <Route path="/access-pending"><Show when="signed-in"><AccessPendingPage /></Show><Show when="signed-out"><Redirect to="/" /></Show></Route>
     <Route component={NotFound} />
   </Switch></RoutedErrorBoundary>;

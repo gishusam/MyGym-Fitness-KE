@@ -10,7 +10,11 @@ from sqlalchemy import delete, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from backend.app.core.auth import require_owner, require_owner_or_receptionist
+from backend.app.core.auth import (
+    require_fitness_staff,
+    require_owner,
+    require_owner_or_receptionist,
+)
 from backend.app.db.session import get_db
 from backend.app.models.attendance import CheckIn
 from backend.app.models.audit_log import AuditLog
@@ -319,7 +323,7 @@ def _assessment_item(item: FitnessAssessment) -> FitnessAssessmentHistoryItem:
 )
 def list_member_fitness_assessments(
     member_id: UUID,
-    _staff: StaffUser = Depends(require_owner_or_receptionist),
+    _staff: StaffUser = Depends(require_fitness_staff),
     session: Session = Depends(get_db),
 ) -> FitnessAssessmentHistory:
     if session.get(Member, member_id) is None:
@@ -342,7 +346,7 @@ def list_member_fitness_assessments(
 def record_member_fitness_assessment(
     member_id: UUID,
     data: FitnessAssessmentRecordInput,
-    staff: StaffUser = Depends(require_owner_or_receptionist),
+    staff: StaffUser = Depends(require_fitness_staff),
     session: Session = Depends(get_db),
 ) -> FitnessAssessmentSaved:
     member = _lock_member(session, member_id)

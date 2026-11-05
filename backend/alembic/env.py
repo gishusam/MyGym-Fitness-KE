@@ -7,7 +7,17 @@ from sqlalchemy import engine_from_config, pool
 
 from backend.app.config import get_settings
 from backend.app.db.base import Base
-from backend.app.models import AuditLog, GymSettings, StaffUser
+from backend.app.models import (
+    AuditLog,
+    EventRegistration,
+    GymEvent,
+    GymSettings,
+    StaffUser,
+    WorkoutAssignment,
+    WorkoutExercise,
+    WorkoutProgram,
+    WorkoutResource,
+)
 
 config = context.config
 if config.config_file_name is not None:

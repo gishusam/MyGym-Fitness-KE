@@ -139,3 +139,35 @@ def require_owner_or_receptionist(
             },
         )
     return staff
+
+
+def require_owner_or_trainer(
+    staff: StaffUser = Depends(get_current_staff),
+) -> StaffUser:
+    if staff.role not in {StaffRole.OWNER, StaffRole.TRAINER}:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "Owner or trainer access is required",
+                "code": "training_access_required",
+            },
+        )
+    return staff
+
+
+def require_fitness_staff(
+    staff: StaffUser = Depends(get_current_staff),
+) -> StaffUser:
+    if staff.role not in {
+        StaffRole.OWNER,
+        StaffRole.RECEPTIONIST,
+        StaffRole.TRAINER,
+    }:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "Staff access is required for fitness records",
+                "code": "fitness_access_required",
+            },
+        )
+    return staff

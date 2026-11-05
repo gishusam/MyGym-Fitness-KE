@@ -152,6 +152,21 @@ export const ListMembersResponse = zod.object({
 /**
  * @summary Register a member
  */
+export const createMemberBodyInitialAssessmentOneWeightKgExclusiveMin = 0;
+export const createMemberBodyInitialAssessmentOneWeightKgMax = 500;
+
+export const createMemberBodyInitialAssessmentOneHeightCmExclusiveMin = 0;
+export const createMemberBodyInitialAssessmentOneHeightCmMax = 300;
+
+export const createMemberBodyInitialAssessmentOneBodyFatPercentMin = 0;
+export const createMemberBodyInitialAssessmentOneBodyFatPercentMax = 100;
+
+export const createMemberBodyInitialAssessmentOneMusclePercentMin = 0;
+export const createMemberBodyInitialAssessmentOneMusclePercentMax = 100;
+
+export const createMemberBodyInitialAssessmentOneVisceralFatLevelMin = 0;
+export const createMemberBodyInitialAssessmentOneVisceralFatLevelMax = 100;
+
 export const createMemberBodyFullNameMin = 2;
 export const createMemberBodyFullNameMax = 160;
 
@@ -163,10 +178,32 @@ export const createMemberBodyEmailMax = 320;
 
 
 export const CreateMemberBody = zod.object({
+  "initialAssessment": zod.union([zod.object({
+  "weightKg": zod.number().gt(createMemberBodyInitialAssessmentOneWeightKgExclusiveMin).max(createMemberBodyInitialAssessmentOneWeightKgMax).nullish(),
+  "heightCm": zod.number().gt(createMemberBodyInitialAssessmentOneHeightCmExclusiveMin).max(createMemberBodyInitialAssessmentOneHeightCmMax).nullish(),
+  "bodyFatPercent": zod.number().min(createMemberBodyInitialAssessmentOneBodyFatPercentMin).max(createMemberBodyInitialAssessmentOneBodyFatPercentMax).nullish(),
+  "musclePercent": zod.number().min(createMemberBodyInitialAssessmentOneMusclePercentMin).max(createMemberBodyInitialAssessmentOneMusclePercentMax).nullish(),
+  "visceralFatLevel": zod.number().min(createMemberBodyInitialAssessmentOneVisceralFatLevelMin).max(createMemberBodyInitialAssessmentOneVisceralFatLevelMax).nullish()
+}),zod.null()]).optional(),
   "fullName": zod.string().min(createMemberBodyFullNameMin).max(createMemberBodyFullNameMax),
   "phone": zod.string().min(createMemberBodyPhoneMin).max(createMemberBodyPhoneMax),
   "email": zod.string().email().max(createMemberBodyEmailMax).nullish()
 })
+
+export const createMemberResponseTwoLatestAssessmentOneOneWeightKgExclusiveMin = 0;
+export const createMemberResponseTwoLatestAssessmentOneOneWeightKgMax = 500;
+
+export const createMemberResponseTwoLatestAssessmentOneOneHeightCmExclusiveMin = 0;
+export const createMemberResponseTwoLatestAssessmentOneOneHeightCmMax = 300;
+
+export const createMemberResponseTwoLatestAssessmentOneOneBodyFatPercentMin = 0;
+export const createMemberResponseTwoLatestAssessmentOneOneBodyFatPercentMax = 100;
+
+export const createMemberResponseTwoLatestAssessmentOneOneMusclePercentMin = 0;
+export const createMemberResponseTwoLatestAssessmentOneOneMusclePercentMax = 100;
+
+export const createMemberResponseTwoLatestAssessmentOneOneVisceralFatLevelMin = 0;
+export const createMemberResponseTwoLatestAssessmentOneOneVisceralFatLevelMax = 100;
 
 export const createMemberResponseTwoQrTokenMin = 32;
 
@@ -182,6 +219,17 @@ export const CreateMemberResponse = zod.object({
   "registeredAt": zod.coerce.date(),
   "initials": zod.string()
 }).and(zod.object({
+  "latestAssessment": zod.union([zod.object({
+  "weightKg": zod.number().gt(createMemberResponseTwoLatestAssessmentOneOneWeightKgExclusiveMin).max(createMemberResponseTwoLatestAssessmentOneOneWeightKgMax).nullish(),
+  "heightCm": zod.number().gt(createMemberResponseTwoLatestAssessmentOneOneHeightCmExclusiveMin).max(createMemberResponseTwoLatestAssessmentOneOneHeightCmMax).nullish(),
+  "bodyFatPercent": zod.number().min(createMemberResponseTwoLatestAssessmentOneOneBodyFatPercentMin).max(createMemberResponseTwoLatestAssessmentOneOneBodyFatPercentMax).nullish(),
+  "musclePercent": zod.number().min(createMemberResponseTwoLatestAssessmentOneOneMusclePercentMin).max(createMemberResponseTwoLatestAssessmentOneOneMusclePercentMax).nullish(),
+  "visceralFatLevel": zod.number().min(createMemberResponseTwoLatestAssessmentOneOneVisceralFatLevelMin).max(createMemberResponseTwoLatestAssessmentOneOneVisceralFatLevelMax).nullish()
+}).and(zod.object({
+  "id": zod.string().uuid(),
+  "recordedAt": zod.coerce.date(),
+  "bmi": zod.number().nullish()
+})),zod.null()]).optional(),
   "qrToken": zod.string().min(createMemberResponseTwoQrTokenMin)
 }))
 
@@ -192,6 +240,21 @@ export const CreateMemberResponse = zod.object({
 export const GetMemberDetailParams = zod.object({
   "memberId": zod.coerce.string().uuid()
 })
+
+export const getMemberDetailResponseTwoLatestAssessmentOneOneWeightKgExclusiveMin = 0;
+export const getMemberDetailResponseTwoLatestAssessmentOneOneWeightKgMax = 500;
+
+export const getMemberDetailResponseTwoLatestAssessmentOneOneHeightCmExclusiveMin = 0;
+export const getMemberDetailResponseTwoLatestAssessmentOneOneHeightCmMax = 300;
+
+export const getMemberDetailResponseTwoLatestAssessmentOneOneBodyFatPercentMin = 0;
+export const getMemberDetailResponseTwoLatestAssessmentOneOneBodyFatPercentMax = 100;
+
+export const getMemberDetailResponseTwoLatestAssessmentOneOneMusclePercentMin = 0;
+export const getMemberDetailResponseTwoLatestAssessmentOneOneMusclePercentMax = 100;
+
+export const getMemberDetailResponseTwoLatestAssessmentOneOneVisceralFatLevelMin = 0;
+export const getMemberDetailResponseTwoLatestAssessmentOneOneVisceralFatLevelMax = 100;
 
 export const getMemberDetailResponseTwoQrTokenMin = 32;
 
@@ -207,6 +270,17 @@ export const GetMemberDetailResponse = zod.object({
   "registeredAt": zod.coerce.date(),
   "initials": zod.string()
 }).and(zod.object({
+  "latestAssessment": zod.union([zod.object({
+  "weightKg": zod.number().gt(getMemberDetailResponseTwoLatestAssessmentOneOneWeightKgExclusiveMin).max(getMemberDetailResponseTwoLatestAssessmentOneOneWeightKgMax).nullish(),
+  "heightCm": zod.number().gt(getMemberDetailResponseTwoLatestAssessmentOneOneHeightCmExclusiveMin).max(getMemberDetailResponseTwoLatestAssessmentOneOneHeightCmMax).nullish(),
+  "bodyFatPercent": zod.number().min(getMemberDetailResponseTwoLatestAssessmentOneOneBodyFatPercentMin).max(getMemberDetailResponseTwoLatestAssessmentOneOneBodyFatPercentMax).nullish(),
+  "musclePercent": zod.number().min(getMemberDetailResponseTwoLatestAssessmentOneOneMusclePercentMin).max(getMemberDetailResponseTwoLatestAssessmentOneOneMusclePercentMax).nullish(),
+  "visceralFatLevel": zod.number().min(getMemberDetailResponseTwoLatestAssessmentOneOneVisceralFatLevelMin).max(getMemberDetailResponseTwoLatestAssessmentOneOneVisceralFatLevelMax).nullish()
+}).and(zod.object({
+  "id": zod.string().uuid(),
+  "recordedAt": zod.coerce.date(),
+  "bmi": zod.number().nullish()
+})),zod.null()]).optional(),
   "qrToken": zod.string().min(getMemberDetailResponseTwoQrTokenMin)
 }))
 
@@ -235,6 +309,21 @@ export const UpdateMemberBody = zod.object({
   "status": zod.enum(['active', 'inactive']).optional()
 })
 
+export const updateMemberResponseTwoLatestAssessmentOneOneWeightKgExclusiveMin = 0;
+export const updateMemberResponseTwoLatestAssessmentOneOneWeightKgMax = 500;
+
+export const updateMemberResponseTwoLatestAssessmentOneOneHeightCmExclusiveMin = 0;
+export const updateMemberResponseTwoLatestAssessmentOneOneHeightCmMax = 300;
+
+export const updateMemberResponseTwoLatestAssessmentOneOneBodyFatPercentMin = 0;
+export const updateMemberResponseTwoLatestAssessmentOneOneBodyFatPercentMax = 100;
+
+export const updateMemberResponseTwoLatestAssessmentOneOneMusclePercentMin = 0;
+export const updateMemberResponseTwoLatestAssessmentOneOneMusclePercentMax = 100;
+
+export const updateMemberResponseTwoLatestAssessmentOneOneVisceralFatLevelMin = 0;
+export const updateMemberResponseTwoLatestAssessmentOneOneVisceralFatLevelMax = 100;
+
 export const updateMemberResponseTwoQrTokenMin = 32;
 
 
@@ -249,6 +338,17 @@ export const UpdateMemberResponse = zod.object({
   "registeredAt": zod.coerce.date(),
   "initials": zod.string()
 }).and(zod.object({
+  "latestAssessment": zod.union([zod.object({
+  "weightKg": zod.number().gt(updateMemberResponseTwoLatestAssessmentOneOneWeightKgExclusiveMin).max(updateMemberResponseTwoLatestAssessmentOneOneWeightKgMax).nullish(),
+  "heightCm": zod.number().gt(updateMemberResponseTwoLatestAssessmentOneOneHeightCmExclusiveMin).max(updateMemberResponseTwoLatestAssessmentOneOneHeightCmMax).nullish(),
+  "bodyFatPercent": zod.number().min(updateMemberResponseTwoLatestAssessmentOneOneBodyFatPercentMin).max(updateMemberResponseTwoLatestAssessmentOneOneBodyFatPercentMax).nullish(),
+  "musclePercent": zod.number().min(updateMemberResponseTwoLatestAssessmentOneOneMusclePercentMin).max(updateMemberResponseTwoLatestAssessmentOneOneMusclePercentMax).nullish(),
+  "visceralFatLevel": zod.number().min(updateMemberResponseTwoLatestAssessmentOneOneVisceralFatLevelMin).max(updateMemberResponseTwoLatestAssessmentOneOneVisceralFatLevelMax).nullish()
+}).and(zod.object({
+  "id": zod.string().uuid(),
+  "recordedAt": zod.coerce.date(),
+  "bmi": zod.number().nullish()
+})),zod.null()]).optional(),
   "qrToken": zod.string().min(updateMemberResponseTwoQrTokenMin)
 }))
 
@@ -767,5 +867,812 @@ export const OverrideCheckInResponse = zod.object({
   "restrictionCodes": zod.array(zod.enum(['member_inactive', 'no_subscription', 'expired', 'plan_inactive', 'outside_hours', 'duplicate'])),
   "staffName": zod.string()
 })
+
+
+/**
+ * @summary Get role-specific dashboard data
+ */
+export const getDashboardSummaryResponseMembershipsExpiringItemDaysRemainingMin = 0;
+
+export const getDashboardSummaryResponseAttendanceTrendItemCheckInsMin = 0;
+
+export const getDashboardSummaryResponseUpcomingEventsItemRegisteredCountMin = 0;
+
+export const getDashboardSummaryResponseUpcomingEventsItemRemainingSlotsMin = 0;
+
+
+
+export const GetDashboardSummaryResponse = zod.object({
+  "role": zod.enum(['owner', 'receptionist', 'trainer']),
+  "activeMembers": zod.number().int().nullish(),
+  "newMembersLast30Days": zod.number().int().nullish(),
+  "revenueThisMonthKes": zod.number().int().nullish(),
+  "paymentsThisMonth": zod.number().int().nullish(),
+  "membershipsExpiring": zod.array(zod.object({
+  "memberId": zod.string().uuid(),
+  "memberNumber": zod.string(),
+  "fullName": zod.string(),
+  "expiresOn": zod.coerce.date(),
+  "daysRemaining": zod.number().int().min(getDashboardSummaryResponseMembershipsExpiringItemDaysRemainingMin)
+})),
+  "inactiveMembers": zod.number().int().nullish(),
+  "checkInsToday": zod.number().int().nullish(),
+  "attendanceTrend": zod.array(zod.object({
+  "day": zod.coerce.date(),
+  "checkIns": zod.number().int().min(getDashboardSummaryResponseAttendanceTrendItemCheckInsMin)
+})),
+  "staffCount": zod.number().int().nullish(),
+  "trainerMemberCount": zod.number().int().nullish(),
+  "recentAssessments": zod.number().int().nullish(),
+  "assignedWorkouts": zod.number().int().nullish(),
+  "upcomingEvents": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "capacity": zod.number().int(),
+  "instructorStaffId": zod.string().uuid().nullable(),
+  "instructorName": zod.string().nullable(),
+  "status": zod.enum(['draft', 'published', 'cancelled']),
+  "registeredCount": zod.number().int().min(getDashboardSummaryResponseUpcomingEventsItemRegisteredCountMin),
+  "remainingSlots": zod.number().int().min(getDashboardSummaryResponseUpcomingEventsItemRemainingSlotsMin),
+  "coverUrl": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary List active member fitness profiles
+ */
+export const listTrainerMembersQuerySearchMax = 120;
+
+
+
+export const ListTrainerMembersQueryParams = zod.object({
+  "search": zod.coerce.string().max(listTrainerMembersQuerySearchMax).optional()
+})
+
+export const listTrainerMembersResponseAssessmentCountMin = 0;
+
+
+
+export const ListTrainerMembersResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "memberNumber": zod.string(),
+  "fullName": zod.string(),
+  "status": zod.enum(['active', 'inactive']),
+  "assessmentCount": zod.number().int().min(listTrainerMembersResponseAssessmentCountMin),
+  "latestAssessment": zod.union([zod.object({
+  "id": zod.string().uuid(),
+  "recordedAt": zod.coerce.date(),
+  "weightKg": zod.number().nullable(),
+  "heightCm": zod.number().nullable(),
+  "bmi": zod.number().nullable(),
+  "bodyFatPercent": zod.number().nullable(),
+  "musclePercent": zod.number().nullable(),
+  "visceralFatLevel": zod.number().nullable()
+}),zod.null()]).optional()
+})
+export const ListTrainerMembersResponse = zod.array(ListTrainerMembersResponseItem)
+
+
+/**
+ * @summary List staff accounts
+ */
+export const ListStaffResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "email": zod.string().email(),
+  "role": zod.enum(['owner', 'receptionist', 'trainer']),
+  "status": zod.enum(['active', 'inactive']),
+  "createdAt": zod.coerce.date()
+})
+export const ListStaffResponse = zod.array(ListStaffResponseItem)
+
+
+/**
+ * @summary Assign a role to a verified sign-in account
+ */
+export const createStaffBodyEmailMin = 5;
+export const createStaffBodyEmailMax = 320;
+
+
+
+export const CreateStaffBody = zod.object({
+  "email": zod.string().email().min(createStaffBodyEmailMin).max(createStaffBodyEmailMax),
+  "role": zod.enum(['receptionist', 'trainer'])
+})
+
+export const CreateStaffResponse = zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "email": zod.string().email(),
+  "role": zod.enum(['owner', 'receptionist', 'trainer']),
+  "status": zod.enum(['active', 'inactive']),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Change a staff role or status
+ */
+export const UpdateStaffParams = zod.object({
+  "staffId": zod.coerce.string().uuid()
+})
+
+export const UpdateStaffBody = zod.object({
+  "role": zod.enum(['receptionist', 'trainer']).optional(),
+  "status": zod.enum(['active', 'inactive']).optional()
+})
+
+export const UpdateStaffResponse = zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "email": zod.string().email(),
+  "role": zod.enum(['owner', 'receptionist', 'trainer']),
+  "status": zod.enum(['active', 'inactive']),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List workout templates
+ */
+export const listWorkoutProgramsQueryIncludeArchivedDefault = false;
+
+export const ListWorkoutProgramsQueryParams = zod.object({
+  "includeArchived": zod.coerce.boolean().default(listWorkoutProgramsQueryIncludeArchivedDefault)
+})
+
+export const listWorkoutProgramsResponseExercisesItemOneNameMin = 2;
+export const listWorkoutProgramsResponseExercisesItemOneNameMax = 120;
+
+export const listWorkoutProgramsResponseExercisesItemOneSetsDefault = 1;
+export const listWorkoutProgramsResponseExercisesItemOneSetsMax = 50;
+
+export const listWorkoutProgramsResponseExercisesItemOneRepetitionsMax = 1000;
+
+export const listWorkoutProgramsResponseExercisesItemOneDurationSecondsMax = 86400;
+
+export const listWorkoutProgramsResponseExercisesItemOneRestSecondsMin = 0;
+export const listWorkoutProgramsResponseExercisesItemOneRestSecondsMax = 3600;
+
+export const listWorkoutProgramsResponseExercisesItemTwoPositionMin = 0;
+
+export const listWorkoutProgramsResponseResourcesItemSizeBytesMax = 10485760;
+
+
+
+export const ListWorkoutProgramsResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "goal": zod.string(),
+  "description": zod.string().nullable(),
+  "status": zod.enum(['active', 'archived']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "exercises": zod.array(zod.object({
+  "name": zod.string().min(listWorkoutProgramsResponseExercisesItemOneNameMin).max(listWorkoutProgramsResponseExercisesItemOneNameMax),
+  "sets": zod.number().int().min(1).max(listWorkoutProgramsResponseExercisesItemOneSetsMax).default(listWorkoutProgramsResponseExercisesItemOneSetsDefault),
+  "repetitions": zod.number().int().min(1).max(listWorkoutProgramsResponseExercisesItemOneRepetitionsMax).nullable(),
+  "durationSeconds": zod.number().int().min(1).max(listWorkoutProgramsResponseExercisesItemOneDurationSecondsMax).nullable(),
+  "restSeconds": zod.number().int().min(listWorkoutProgramsResponseExercisesItemOneRestSecondsMin).max(listWorkoutProgramsResponseExercisesItemOneRestSecondsMax).nullable()
+}).and(zod.object({
+  "id": zod.string().uuid(),
+  "position": zod.number().int().min(listWorkoutProgramsResponseExercisesItemTwoPositionMin)
+}))),
+  "resources": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "originalFilename": zod.string(),
+  "mediaType": zod.string(),
+  "sizeBytes": zod.number().int().min(1).max(listWorkoutProgramsResponseResourcesItemSizeBytesMax),
+  "createdAt": zod.coerce.date(),
+  "downloadUrl": zod.string()
+}))
+})
+export const ListWorkoutProgramsResponse = zod.array(ListWorkoutProgramsResponseItem)
+
+
+/**
+ * @summary Create a workout template
+ */
+export const createWorkoutProgramBodyNameMin = 2;
+export const createWorkoutProgramBodyNameMax = 120;
+
+export const createWorkoutProgramBodyGoalMin = 2;
+export const createWorkoutProgramBodyGoalMax = 200;
+
+export const createWorkoutProgramBodyDescriptionMax = 4000;
+
+export const createWorkoutProgramBodyExercisesItemNameMin = 2;
+export const createWorkoutProgramBodyExercisesItemNameMax = 120;
+
+export const createWorkoutProgramBodyExercisesItemSetsDefault = 1;
+export const createWorkoutProgramBodyExercisesItemSetsMax = 50;
+
+export const createWorkoutProgramBodyExercisesItemRepetitionsMax = 1000;
+
+export const createWorkoutProgramBodyExercisesItemDurationSecondsMax = 86400;
+
+export const createWorkoutProgramBodyExercisesItemRestSecondsMin = 0;
+export const createWorkoutProgramBodyExercisesItemRestSecondsMax = 3600;
+
+export const createWorkoutProgramBodyExercisesMax = 30;
+
+
+
+export const CreateWorkoutProgramBody = zod.object({
+  "name": zod.string().min(createWorkoutProgramBodyNameMin).max(createWorkoutProgramBodyNameMax),
+  "goal": zod.string().min(createWorkoutProgramBodyGoalMin).max(createWorkoutProgramBodyGoalMax),
+  "description": zod.string().max(createWorkoutProgramBodyDescriptionMax).nullish(),
+  "exercises": zod.array(zod.object({
+  "name": zod.string().min(createWorkoutProgramBodyExercisesItemNameMin).max(createWorkoutProgramBodyExercisesItemNameMax),
+  "sets": zod.number().int().min(1).max(createWorkoutProgramBodyExercisesItemSetsMax).default(createWorkoutProgramBodyExercisesItemSetsDefault),
+  "repetitions": zod.number().int().min(1).max(createWorkoutProgramBodyExercisesItemRepetitionsMax).nullish(),
+  "durationSeconds": zod.number().int().min(1).max(createWorkoutProgramBodyExercisesItemDurationSecondsMax).nullish(),
+  "restSeconds": zod.number().int().min(createWorkoutProgramBodyExercisesItemRestSecondsMin).max(createWorkoutProgramBodyExercisesItemRestSecondsMax).nullish()
+})).min(1).max(createWorkoutProgramBodyExercisesMax)
+})
+
+export const createWorkoutProgramResponseExercisesItemOneNameMin = 2;
+export const createWorkoutProgramResponseExercisesItemOneNameMax = 120;
+
+export const createWorkoutProgramResponseExercisesItemOneSetsDefault = 1;
+export const createWorkoutProgramResponseExercisesItemOneSetsMax = 50;
+
+export const createWorkoutProgramResponseExercisesItemOneRepetitionsMax = 1000;
+
+export const createWorkoutProgramResponseExercisesItemOneDurationSecondsMax = 86400;
+
+export const createWorkoutProgramResponseExercisesItemOneRestSecondsMin = 0;
+export const createWorkoutProgramResponseExercisesItemOneRestSecondsMax = 3600;
+
+export const createWorkoutProgramResponseExercisesItemTwoPositionMin = 0;
+
+export const createWorkoutProgramResponseResourcesItemSizeBytesMax = 10485760;
+
+
+
+export const CreateWorkoutProgramResponse = zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "goal": zod.string(),
+  "description": zod.string().nullable(),
+  "status": zod.enum(['active', 'archived']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "exercises": zod.array(zod.object({
+  "name": zod.string().min(createWorkoutProgramResponseExercisesItemOneNameMin).max(createWorkoutProgramResponseExercisesItemOneNameMax),
+  "sets": zod.number().int().min(1).max(createWorkoutProgramResponseExercisesItemOneSetsMax).default(createWorkoutProgramResponseExercisesItemOneSetsDefault),
+  "repetitions": zod.number().int().min(1).max(createWorkoutProgramResponseExercisesItemOneRepetitionsMax).nullable(),
+  "durationSeconds": zod.number().int().min(1).max(createWorkoutProgramResponseExercisesItemOneDurationSecondsMax).nullable(),
+  "restSeconds": zod.number().int().min(createWorkoutProgramResponseExercisesItemOneRestSecondsMin).max(createWorkoutProgramResponseExercisesItemOneRestSecondsMax).nullable()
+}).and(zod.object({
+  "id": zod.string().uuid(),
+  "position": zod.number().int().min(createWorkoutProgramResponseExercisesItemTwoPositionMin)
+}))),
+  "resources": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "originalFilename": zod.string(),
+  "mediaType": zod.string(),
+  "sizeBytes": zod.number().int().min(1).max(createWorkoutProgramResponseResourcesItemSizeBytesMax),
+  "createdAt": zod.coerce.date(),
+  "downloadUrl": zod.string()
+}))
+})
+
+
+/**
+ * @summary Update or archive a workout template
+ */
+export const UpdateWorkoutProgramParams = zod.object({
+  "programId": zod.coerce.string().uuid()
+})
+
+export const updateWorkoutProgramBodyNameMin = 2;
+export const updateWorkoutProgramBodyNameMax = 120;
+
+export const updateWorkoutProgramBodyGoalMin = 2;
+export const updateWorkoutProgramBodyGoalMax = 200;
+
+export const updateWorkoutProgramBodyDescriptionMax = 4000;
+
+export const updateWorkoutProgramBodyExercisesItemNameMin = 2;
+export const updateWorkoutProgramBodyExercisesItemNameMax = 120;
+
+export const updateWorkoutProgramBodyExercisesItemSetsDefault = 1;
+export const updateWorkoutProgramBodyExercisesItemSetsMax = 50;
+
+export const updateWorkoutProgramBodyExercisesItemRepetitionsMax = 1000;
+
+export const updateWorkoutProgramBodyExercisesItemDurationSecondsMax = 86400;
+
+export const updateWorkoutProgramBodyExercisesItemRestSecondsMin = 0;
+export const updateWorkoutProgramBodyExercisesItemRestSecondsMax = 3600;
+
+export const updateWorkoutProgramBodyExercisesMax = 30;
+
+
+
+export const UpdateWorkoutProgramBody = zod.object({
+  "name": zod.string().min(updateWorkoutProgramBodyNameMin).max(updateWorkoutProgramBodyNameMax).optional(),
+  "goal": zod.string().min(updateWorkoutProgramBodyGoalMin).max(updateWorkoutProgramBodyGoalMax).optional(),
+  "description": zod.string().max(updateWorkoutProgramBodyDescriptionMax).nullish(),
+  "status": zod.enum(['active', 'archived']).optional(),
+  "exercises": zod.array(zod.object({
+  "name": zod.string().min(updateWorkoutProgramBodyExercisesItemNameMin).max(updateWorkoutProgramBodyExercisesItemNameMax),
+  "sets": zod.number().int().min(1).max(updateWorkoutProgramBodyExercisesItemSetsMax).default(updateWorkoutProgramBodyExercisesItemSetsDefault),
+  "repetitions": zod.number().int().min(1).max(updateWorkoutProgramBodyExercisesItemRepetitionsMax).nullish(),
+  "durationSeconds": zod.number().int().min(1).max(updateWorkoutProgramBodyExercisesItemDurationSecondsMax).nullish(),
+  "restSeconds": zod.number().int().min(updateWorkoutProgramBodyExercisesItemRestSecondsMin).max(updateWorkoutProgramBodyExercisesItemRestSecondsMax).nullish()
+})).min(1).max(updateWorkoutProgramBodyExercisesMax).optional()
+})
+
+export const updateWorkoutProgramResponseExercisesItemOneNameMin = 2;
+export const updateWorkoutProgramResponseExercisesItemOneNameMax = 120;
+
+export const updateWorkoutProgramResponseExercisesItemOneSetsDefault = 1;
+export const updateWorkoutProgramResponseExercisesItemOneSetsMax = 50;
+
+export const updateWorkoutProgramResponseExercisesItemOneRepetitionsMax = 1000;
+
+export const updateWorkoutProgramResponseExercisesItemOneDurationSecondsMax = 86400;
+
+export const updateWorkoutProgramResponseExercisesItemOneRestSecondsMin = 0;
+export const updateWorkoutProgramResponseExercisesItemOneRestSecondsMax = 3600;
+
+export const updateWorkoutProgramResponseExercisesItemTwoPositionMin = 0;
+
+export const updateWorkoutProgramResponseResourcesItemSizeBytesMax = 10485760;
+
+
+
+export const UpdateWorkoutProgramResponse = zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "goal": zod.string(),
+  "description": zod.string().nullable(),
+  "status": zod.enum(['active', 'archived']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "exercises": zod.array(zod.object({
+  "name": zod.string().min(updateWorkoutProgramResponseExercisesItemOneNameMin).max(updateWorkoutProgramResponseExercisesItemOneNameMax),
+  "sets": zod.number().int().min(1).max(updateWorkoutProgramResponseExercisesItemOneSetsMax).default(updateWorkoutProgramResponseExercisesItemOneSetsDefault),
+  "repetitions": zod.number().int().min(1).max(updateWorkoutProgramResponseExercisesItemOneRepetitionsMax).nullable(),
+  "durationSeconds": zod.number().int().min(1).max(updateWorkoutProgramResponseExercisesItemOneDurationSecondsMax).nullable(),
+  "restSeconds": zod.number().int().min(updateWorkoutProgramResponseExercisesItemOneRestSecondsMin).max(updateWorkoutProgramResponseExercisesItemOneRestSecondsMax).nullable()
+}).and(zod.object({
+  "id": zod.string().uuid(),
+  "position": zod.number().int().min(updateWorkoutProgramResponseExercisesItemTwoPositionMin)
+}))),
+  "resources": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "originalFilename": zod.string(),
+  "mediaType": zod.string(),
+  "sizeBytes": zod.number().int().min(1).max(updateWorkoutProgramResponseResourcesItemSizeBytesMax),
+  "createdAt": zod.coerce.date(),
+  "downloadUrl": zod.string()
+}))
+})
+
+
+/**
+ * @summary List workout assignments
+ */
+export const ListWorkoutAssignmentsQueryParams = zod.object({
+  "memberId": zod.coerce.string().uuid().optional()
+})
+
+export const ListWorkoutAssignmentsResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "programId": zod.string().uuid(),
+  "programName": zod.string(),
+  "goal": zod.string(),
+  "memberId": zod.string().uuid(),
+  "memberNumber": zod.string(),
+  "memberName": zod.string(),
+  "startsOn": zod.coerce.date(),
+  "status": zod.enum(['assigned', 'in_progress', 'completed', 'cancelled']),
+  "notes": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+})
+export const ListWorkoutAssignmentsResponse = zod.array(ListWorkoutAssignmentsResponseItem)
+
+
+/**
+ * @summary Assign a workout template to a member
+ */
+export const AssignWorkoutProgramParams = zod.object({
+  "programId": zod.coerce.string().uuid()
+})
+
+export const assignWorkoutProgramBodyNotesMax = 1000;
+
+
+
+export const AssignWorkoutProgramBody = zod.object({
+  "memberId": zod.string().uuid(),
+  "startsOn": zod.coerce.date(),
+  "notes": zod.string().max(assignWorkoutProgramBodyNotesMax).nullish()
+})
+
+export const AssignWorkoutProgramResponse = zod.object({
+  "id": zod.string().uuid(),
+  "programId": zod.string().uuid(),
+  "programName": zod.string(),
+  "goal": zod.string(),
+  "memberId": zod.string().uuid(),
+  "memberNumber": zod.string(),
+  "memberName": zod.string(),
+  "startsOn": zod.coerce.date(),
+  "status": zod.enum(['assigned', 'in_progress', 'completed', 'cancelled']),
+  "notes": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a workout assignment status or note
+ */
+export const UpdateWorkoutAssignmentParams = zod.object({
+  "assignmentId": zod.coerce.string().uuid()
+})
+
+export const updateWorkoutAssignmentBodyNotesMax = 1000;
+
+
+
+export const UpdateWorkoutAssignmentBody = zod.object({
+  "status": zod.enum(['assigned', 'in_progress', 'completed', 'cancelled']).optional(),
+  "notes": zod.string().max(updateWorkoutAssignmentBodyNotesMax).nullish()
+})
+
+export const UpdateWorkoutAssignmentResponse = zod.object({
+  "id": zod.string().uuid(),
+  "programId": zod.string().uuid(),
+  "programName": zod.string(),
+  "goal": zod.string(),
+  "memberId": zod.string().uuid(),
+  "memberNumber": zod.string(),
+  "memberName": zod.string(),
+  "startsOn": zod.coerce.date(),
+  "status": zod.enum(['assigned', 'in_progress', 'completed', 'cancelled']),
+  "notes": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Upload a private PDF or image resource
+ */
+export const UploadWorkoutResourceParams = zod.object({
+  "programId": zod.coerce.string().uuid()
+})
+
+export const UploadWorkoutResourceHeader = zod.object({
+  "x-file-name": zod.string().optional()
+})
+
+export const uploadWorkoutResourceResponseSizeBytesMax = 10485760;
+
+
+
+export const UploadWorkoutResourceResponse = zod.object({
+  "id": zod.string().uuid(),
+  "originalFilename": zod.string(),
+  "mediaType": zod.string(),
+  "sizeBytes": zod.number().int().min(1).max(uploadWorkoutResourceResponseSizeBytesMax),
+  "createdAt": zod.coerce.date(),
+  "downloadUrl": zod.string()
+})
+
+
+/**
+ * @summary Download a private workout resource
+ */
+export const DownloadWorkoutResourceParams = zod.object({
+  "resourceId": zod.coerce.string().uuid()
+})
+
+export const DownloadWorkoutResourceResponse = zod.unknown()
+
+
+/**
+ * @summary List upcoming or past gym events
+ */
+export const ListEventsQueryParams = zod.object({
+  "timeframe": zod.enum(['upcoming', 'past']).optional(),
+  "status": zod.enum(['draft', 'published', 'cancelled']).optional()
+})
+
+export const listEventsResponseRegisteredCountMin = 0;
+
+export const listEventsResponseRemainingSlotsMin = 0;
+
+
+
+export const ListEventsResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "capacity": zod.number().int(),
+  "instructorStaffId": zod.string().uuid().nullable(),
+  "instructorName": zod.string().nullable(),
+  "status": zod.enum(['draft', 'published', 'cancelled']),
+  "registeredCount": zod.number().int().min(listEventsResponseRegisteredCountMin),
+  "remainingSlots": zod.number().int().min(listEventsResponseRemainingSlotsMin),
+  "coverUrl": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListEventsResponse = zod.array(ListEventsResponseItem)
+
+
+/**
+ * @summary Create an event or gym class
+ */
+export const createEventBodyNameMin = 2;
+export const createEventBodyNameMax = 140;
+
+export const createEventBodyDescriptionMax = 4000;
+
+export const createEventBodyCapacityMax = 10000;
+
+export const createEventBodyStatusDefault = `draft`;
+
+export const CreateEventBody = zod.object({
+  "name": zod.string().min(createEventBodyNameMin).max(createEventBodyNameMax),
+  "description": zod.string().max(createEventBodyDescriptionMax).nullish(),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "capacity": zod.number().int().min(1).max(createEventBodyCapacityMax),
+  "instructorStaffId": zod.string().uuid().nullish(),
+  "status": zod.enum(['draft', 'published', 'cancelled']).default(createEventBodyStatusDefault)
+})
+
+export const createEventResponseRegisteredCountMin = 0;
+
+export const createEventResponseRemainingSlotsMin = 0;
+
+
+
+export const CreateEventResponse = zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "capacity": zod.number().int(),
+  "instructorStaffId": zod.string().uuid().nullable(),
+  "instructorName": zod.string().nullable(),
+  "status": zod.enum(['draft', 'published', 'cancelled']),
+  "registeredCount": zod.number().int().min(createEventResponseRegisteredCountMin),
+  "remainingSlots": zod.number().int().min(createEventResponseRemainingSlotsMin),
+  "coverUrl": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List active owners and trainers
+ */
+export const ListEventInstructorsResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "role": zod.enum(['owner', 'trainer'])
+})
+export const ListEventInstructorsResponse = zod.array(ListEventInstructorsResponseItem)
+
+
+/**
+ * @summary Search active members for event registration
+ */
+export const searchEventMembersQuerySearchMax = 120;
+
+
+
+export const SearchEventMembersQueryParams = zod.object({
+  "search": zod.coerce.string().min(1).max(searchEventMembersQuerySearchMax)
+})
+
+export const SearchEventMembersResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "memberNumber": zod.string(),
+  "fullName": zod.string(),
+  "status": zod.enum(['active', 'inactive'])
+})
+export const SearchEventMembersResponse = zod.array(SearchEventMembersResponseItem)
+
+
+/**
+ * @summary Get event details
+ */
+export const GetEventParams = zod.object({
+  "eventId": zod.coerce.string().uuid()
+})
+
+export const getEventResponseRegisteredCountMin = 0;
+
+export const getEventResponseRemainingSlotsMin = 0;
+
+
+
+export const GetEventResponse = zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "capacity": zod.number().int(),
+  "instructorStaffId": zod.string().uuid().nullable(),
+  "instructorName": zod.string().nullable(),
+  "status": zod.enum(['draft', 'published', 'cancelled']),
+  "registeredCount": zod.number().int().min(getEventResponseRegisteredCountMin),
+  "remainingSlots": zod.number().int().min(getEventResponseRemainingSlotsMin),
+  "coverUrl": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Edit, publish or cancel an event
+ */
+export const UpdateEventParams = zod.object({
+  "eventId": zod.coerce.string().uuid()
+})
+
+export const updateEventBodyNameMin = 2;
+export const updateEventBodyNameMax = 140;
+
+export const updateEventBodyDescriptionMax = 4000;
+
+export const updateEventBodyCapacityMax = 10000;
+
+
+
+export const UpdateEventBody = zod.object({
+  "name": zod.string().min(updateEventBodyNameMin).max(updateEventBodyNameMax).optional(),
+  "description": zod.string().max(updateEventBodyDescriptionMax).nullish(),
+  "startsAt": zod.coerce.date().optional(),
+  "endsAt": zod.coerce.date().optional(),
+  "capacity": zod.number().int().min(1).max(updateEventBodyCapacityMax).optional(),
+  "instructorStaffId": zod.string().uuid().nullish(),
+  "status": zod.enum(['draft', 'published', 'cancelled']).optional()
+})
+
+export const updateEventResponseRegisteredCountMin = 0;
+
+export const updateEventResponseRemainingSlotsMin = 0;
+
+
+
+export const UpdateEventResponse = zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "capacity": zod.number().int(),
+  "instructorStaffId": zod.string().uuid().nullable(),
+  "instructorName": zod.string().nullable(),
+  "status": zod.enum(['draft', 'published', 'cancelled']),
+  "registeredCount": zod.number().int().min(updateEventResponseRegisteredCountMin),
+  "remainingSlots": zod.number().int().min(updateEventResponseRemainingSlotsMin),
+  "coverUrl": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List event registrations
+ */
+export const ListEventRegistrationsParams = zod.object({
+  "eventId": zod.coerce.string().uuid()
+})
+
+export const ListEventRegistrationsResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "eventId": zod.string().uuid(),
+  "memberId": zod.string().uuid(),
+  "memberNumber": zod.string(),
+  "memberName": zod.string(),
+  "status": zod.enum(['confirmed', 'cancelled']),
+  "registeredAt": zod.coerce.date()
+})
+export const ListEventRegistrationsResponse = zod.array(ListEventRegistrationsResponseItem)
+
+
+/**
+ * @summary Register an active member for a published event
+ */
+export const RegisterMemberForEventParams = zod.object({
+  "eventId": zod.coerce.string().uuid()
+})
+
+export const RegisterMemberForEventBody = zod.object({
+  "memberId": zod.string().uuid()
+})
+
+export const RegisterMemberForEventResponse = zod.object({
+  "id": zod.string().uuid(),
+  "eventId": zod.string().uuid(),
+  "memberId": zod.string().uuid(),
+  "memberNumber": zod.string(),
+  "memberName": zod.string(),
+  "status": zod.enum(['confirmed', 'cancelled']),
+  "registeredAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Cancel a member registration
+ */
+export const CancelEventRegistrationParams = zod.object({
+  "eventId": zod.coerce.string().uuid(),
+  "registrationId": zod.coerce.string().uuid()
+})
+
+export const CancelEventRegistrationResponse = zod.object({
+  "id": zod.string().uuid(),
+  "eventId": zod.string().uuid(),
+  "memberId": zod.string().uuid(),
+  "memberNumber": zod.string(),
+  "memberName": zod.string(),
+  "status": zod.enum(['confirmed', 'cancelled']),
+  "registeredAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Upload a private event cover image
+ */
+export const UploadEventCoverParams = zod.object({
+  "eventId": zod.coerce.string().uuid()
+})
+
+export const UploadEventCoverHeader = zod.object({
+  "x-file-name": zod.string().optional()
+})
+
+export const uploadEventCoverResponseRegisteredCountMin = 0;
+
+export const uploadEventCoverResponseRemainingSlotsMin = 0;
+
+
+
+export const UploadEventCoverResponse = zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "capacity": zod.number().int(),
+  "instructorStaffId": zod.string().uuid().nullable(),
+  "instructorName": zod.string().nullable(),
+  "status": zod.enum(['draft', 'published', 'cancelled']),
+  "registeredCount": zod.number().int().min(uploadEventCoverResponseRegisteredCountMin),
+  "remainingSlots": zod.number().int().min(uploadEventCoverResponseRemainingSlotsMin),
+  "coverUrl": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Read a private event cover image
+ */
+export const DownloadEventCoverParams = zod.object({
+  "eventId": zod.coerce.string().uuid()
+})
+
+export const DownloadEventCoverResponse = zod.unknown()
 
 

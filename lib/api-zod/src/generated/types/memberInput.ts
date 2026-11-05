@@ -5,8 +5,10 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { FitnessAssessmentInput } from './fitnessAssessmentInput';
 
 export interface MemberInput {
+  initialAssessment?: FitnessAssessmentInput | null;
   /**
      * @minLength 2
      * @maxLength 160

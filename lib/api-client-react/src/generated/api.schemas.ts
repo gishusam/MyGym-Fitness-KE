@@ -148,20 +148,47 @@ export const CheckInSource = {
 } as const;
 
 export interface FitnessAssessmentInput {
+  /**
+     * @maximum 500
+     * @exclusiveMinimum 0
+     * @nullable
+     */
   weightKg?: number | null;
+  /**
+     * @maximum 300
+     * @exclusiveMinimum 0
+     * @nullable
+     */
   heightCm?: number | null;
+  /**
+     * @minimum 0
+     * @maximum 100
+     * @nullable
+     */
   bodyFatPercent?: number | null;
+  /**
+     * @minimum 0
+     * @maximum 100
+     * @nullable
+     */
   musclePercent?: number | null;
+  /**
+     * @minimum 0
+     * @maximum 100
+     * @nullable
+     */
   visceralFatLevel?: number | null;
 }
 
-export interface FitnessAssessmentResponse extends FitnessAssessmentInput {
+export type FitnessAssessmentResponse = FitnessAssessmentInput & ({
   id: string;
   recordedAt: string;
+  /** @nullable */
   bmi?: number | null;
-}
+});
 
 export interface MemberInput {
+  initialAssessment?: FitnessAssessmentInput | null;
   /**
      * @minLength 2
      * @maxLength 160
@@ -177,7 +204,6 @@ export interface MemberInput {
      * @nullable
      */
   email?: string | null;
-  initialAssessment?: FitnessAssessmentInput | null;
 }
 
 export interface MemberUpdate {
@@ -211,11 +237,11 @@ export interface MemberSummary {
   initials: string;
 }
 
-export type MemberDetail = MemberSummary & {
+export type MemberDetail = MemberSummary & ({
+  latestAssessment?: FitnessAssessmentResponse | null;
   /** @minLength 32 */
   qrToken: string;
-  latestAssessment?: FitnessAssessmentResponse | null;
-};
+});
 
 export interface MemberQr {
   memberId: string;
@@ -467,6 +493,426 @@ export interface CheckInPage {
   pageSize: number;
 }
 
+export type StaffRole = typeof StaffRole[keyof typeof StaffRole];
+
+
+export const StaffRole = {
+  owner: 'owner',
+  receptionist: 'receptionist',
+  trainer: 'trainer',
+} as const;
+
+export type StaffMemberStatus = typeof StaffMemberStatus[keyof typeof StaffMemberStatus];
+
+
+export const StaffMemberStatus = {
+  active: 'active',
+  inactive: 'inactive',
+} as const;
+
+export interface StaffMember {
+  id: string;
+  name: string;
+  email: string;
+  role: StaffRole;
+  status: StaffMemberStatus;
+  createdAt: string;
+}
+
+export type StaffCreateInputRole = typeof StaffCreateInputRole[keyof typeof StaffCreateInputRole];
+
+
+export const StaffCreateInputRole = {
+  receptionist: 'receptionist',
+  trainer: 'trainer',
+} as const;
+
+export interface StaffCreateInput {
+  /**
+     * @minLength 5
+     * @maxLength 320
+     */
+  email: string;
+  role: StaffCreateInputRole;
+}
+
+export type StaffUpdateInputRole = typeof StaffUpdateInputRole[keyof typeof StaffUpdateInputRole];
+
+
+export const StaffUpdateInputRole = {
+  receptionist: 'receptionist',
+  trainer: 'trainer',
+} as const;
+
+export type StaffUpdateInputStatus = typeof StaffUpdateInputStatus[keyof typeof StaffUpdateInputStatus];
+
+
+export const StaffUpdateInputStatus = {
+  active: 'active',
+  inactive: 'inactive',
+} as const;
+
+export interface StaffUpdateInput {
+  role?: StaffUpdateInputRole;
+  status?: StaffUpdateInputStatus;
+}
+
+export interface AttendanceDay {
+  day: string;
+  /** @minimum 0 */
+  checkIns: number;
+}
+
+export interface ExpiringMembership {
+  memberId: string;
+  memberNumber: string;
+  fullName: string;
+  expiresOn: string;
+  /** @minimum 0 */
+  daysRemaining: number;
+}
+
+export interface FitnessAssessmentHistoryItem {
+  id: string;
+  recordedAt: string;
+  /** @nullable */
+  weightKg: number | null;
+  /** @nullable */
+  heightCm: number | null;
+  /** @nullable */
+  bmi: number | null;
+  /** @nullable */
+  bodyFatPercent: number | null;
+  /** @nullable */
+  musclePercent: number | null;
+  /** @nullable */
+  visceralFatLevel: number | null;
+}
+
+export interface TrainerMember {
+  id: string;
+  memberNumber: string;
+  fullName: string;
+  status: MemberStatus;
+  /** @minimum 0 */
+  assessmentCount: number;
+  latestAssessment?: FitnessAssessmentHistoryItem | null;
+}
+
+export type EventStatus = typeof EventStatus[keyof typeof EventStatus];
+
+
+export const EventStatus = {
+  draft: 'draft',
+  published: 'published',
+  cancelled: 'cancelled',
+} as const;
+
+export interface GymEvent {
+  id: string;
+  name: string;
+  /** @nullable */
+  description: string | null;
+  startsAt: string;
+  endsAt: string;
+  capacity: number;
+  /** @nullable */
+  instructorStaffId: string | null;
+  /** @nullable */
+  instructorName: string | null;
+  status: EventStatus;
+  /** @minimum 0 */
+  registeredCount: number;
+  /** @minimum 0 */
+  remainingSlots: number;
+  /** @nullable */
+  coverUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DashboardSummary {
+  role: StaffRole;
+  /** @nullable */
+  activeMembers?: number | null;
+  /** @nullable */
+  newMembersLast30Days?: number | null;
+  /** @nullable */
+  revenueThisMonthKes?: number | null;
+  /** @nullable */
+  paymentsThisMonth?: number | null;
+  membershipsExpiring: ExpiringMembership[];
+  /** @nullable */
+  inactiveMembers?: number | null;
+  /** @nullable */
+  checkInsToday?: number | null;
+  attendanceTrend: AttendanceDay[];
+  /** @nullable */
+  staffCount?: number | null;
+  /** @nullable */
+  trainerMemberCount?: number | null;
+  /** @nullable */
+  recentAssessments?: number | null;
+  /** @nullable */
+  assignedWorkouts?: number | null;
+  upcomingEvents: GymEvent[];
+}
+
+export type WorkoutStatus = typeof WorkoutStatus[keyof typeof WorkoutStatus];
+
+
+export const WorkoutStatus = {
+  active: 'active',
+  archived: 'archived',
+} as const;
+
+export type WorkoutAssignmentStatus = typeof WorkoutAssignmentStatus[keyof typeof WorkoutAssignmentStatus];
+
+
+export const WorkoutAssignmentStatus = {
+  assigned: 'assigned',
+  in_progress: 'in_progress',
+  completed: 'completed',
+  cancelled: 'cancelled',
+} as const;
+
+export interface WorkoutExerciseInput {
+  /**
+     * @minLength 2
+     * @maxLength 120
+     */
+  name: string;
+  /**
+     * @minimum 1
+     * @maximum 50
+     */
+  sets?: number;
+  /**
+     * @minimum 1
+     * @maximum 1000
+     * @nullable
+     */
+  repetitions?: number | null;
+  /**
+     * @minimum 1
+     * @maximum 86400
+     * @nullable
+     */
+  durationSeconds?: number | null;
+  /**
+     * @minimum 0
+     * @maximum 3600
+     * @nullable
+     */
+  restSeconds?: number | null;
+}
+
+export type WorkoutExercise = WorkoutExerciseInput & {
+  id: string;
+  /** @minimum 0 */
+  position: number;
+} & Required<Pick<WorkoutExerciseInput & {
+  id: string;
+  /** @minimum 0 */
+  position: number;
+}, 'sets' | 'repetitions' | 'durationSeconds' | 'restSeconds'>>;
+
+export interface WorkoutResource {
+  id: string;
+  originalFilename: string;
+  mediaType: string;
+  /**
+     * @minimum 1
+     * @maximum 10485760
+     */
+  sizeBytes: number;
+  createdAt: string;
+  downloadUrl: string;
+}
+
+export interface WorkoutProgramInput {
+  /**
+     * @minLength 2
+     * @maxLength 120
+     */
+  name: string;
+  /**
+     * @minLength 2
+     * @maxLength 200
+     */
+  goal: string;
+  /**
+     * @maxLength 4000
+     * @nullable
+     */
+  description?: string | null;
+  /**
+     * @minItems 1
+     * @maxItems 30
+     */
+  exercises: WorkoutExerciseInput[];
+}
+
+export interface WorkoutProgramUpdate {
+  /**
+     * @minLength 2
+     * @maxLength 120
+     */
+  name?: string;
+  /**
+     * @minLength 2
+     * @maxLength 200
+     */
+  goal?: string;
+  /**
+     * @maxLength 4000
+     * @nullable
+     */
+  description?: string | null;
+  status?: WorkoutStatus;
+  /**
+     * @minItems 1
+     * @maxItems 30
+     */
+  exercises?: WorkoutExerciseInput[];
+}
+
+export interface WorkoutProgram {
+  id: string;
+  name: string;
+  goal: string;
+  /** @nullable */
+  description: string | null;
+  status: WorkoutStatus;
+  createdAt: string;
+  updatedAt: string;
+  exercises: WorkoutExercise[];
+  resources: WorkoutResource[];
+}
+
+export interface WorkoutAssignmentInput {
+  memberId: string;
+  startsOn: string;
+  /**
+     * @maxLength 1000
+     * @nullable
+     */
+  notes?: string | null;
+}
+
+export interface WorkoutAssignmentUpdate {
+  status?: WorkoutAssignmentStatus;
+  /**
+     * @maxLength 1000
+     * @nullable
+     */
+  notes?: string | null;
+}
+
+export interface WorkoutAssignment {
+  id: string;
+  programId: string;
+  programName: string;
+  goal: string;
+  memberId: string;
+  memberNumber: string;
+  memberName: string;
+  startsOn: string;
+  status: WorkoutAssignmentStatus;
+  /** @nullable */
+  notes: string | null;
+  createdAt: string;
+}
+
+export type EventInstructorRole = typeof EventInstructorRole[keyof typeof EventInstructorRole];
+
+
+export const EventInstructorRole = {
+  owner: 'owner',
+  trainer: 'trainer',
+} as const;
+
+export interface EventInstructor {
+  id: string;
+  name: string;
+  role: EventInstructorRole;
+}
+
+export interface EventMember {
+  id: string;
+  memberNumber: string;
+  fullName: string;
+  status: MemberStatus;
+}
+
+export interface EventInput {
+  /**
+     * @minLength 2
+     * @maxLength 140
+     */
+  name: string;
+  /**
+     * @maxLength 4000
+     * @nullable
+     */
+  description?: string | null;
+  startsAt: string;
+  endsAt: string;
+  /**
+     * @minimum 1
+     * @maximum 10000
+     */
+  capacity: number;
+  /** @nullable */
+  instructorStaffId?: string | null;
+  status?: EventStatus;
+}
+
+export interface EventUpdate {
+  /**
+     * @minLength 2
+     * @maxLength 140
+     */
+  name?: string;
+  /**
+     * @maxLength 4000
+     * @nullable
+     */
+  description?: string | null;
+  startsAt?: string;
+  endsAt?: string;
+  /**
+     * @minimum 1
+     * @maximum 10000
+     */
+  capacity?: number;
+  /** @nullable */
+  instructorStaffId?: string | null;
+  status?: EventStatus;
+}
+
+export interface EventRegistrationInput {
+  memberId: string;
+}
+
+export type EventRegistrationStatus = typeof EventRegistrationStatus[keyof typeof EventRegistrationStatus];
+
+
+export const EventRegistrationStatus = {
+  confirmed: 'confirmed',
+  cancelled: 'cancelled',
+} as const;
+
+export interface EventRegistration {
+  id: string;
+  eventId: string;
+  memberId: string;
+  memberNumber: string;
+  memberName: string;
+  status: EventRegistrationStatus;
+  registeredAt: string;
+}
+
 export interface ApiError {
   error: string;
   code: string;
@@ -536,5 +982,41 @@ page?: number;
  * @maximum 100
  */
 pageSize?: number;
+};
+
+export type ListTrainerMembersParams = {
+/**
+ * @maxLength 120
+ */
+search?: string;
+};
+
+export type ListWorkoutProgramsParams = {
+includeArchived?: boolean;
+};
+
+export type ListWorkoutAssignmentsParams = {
+memberId?: string;
+};
+
+export type ListEventsParams = {
+timeframe?: ListEventsTimeframe;
+status?: EventStatus;
+};
+
+export type ListEventsTimeframe = typeof ListEventsTimeframe[keyof typeof ListEventsTimeframe];
+
+
+export const ListEventsTimeframe = {
+  upcoming: 'upcoming',
+  past: 'past',
+} as const;
+
+export type SearchEventMembersParams = {
+/**
+ * @minLength 1
+ * @maxLength 120
+ */
+search: string;
 };
 

@@ -26,6 +26,8 @@ tags:
     description: Role-specific staff workspace data
   - name: workouts
     description: Trainer workout programs, assignments and private resources
+  - name: member onboarding
+    description: Public onboarding and trainer review
   - name: events
     description: Gym classes, events and staff-managed registrations
 paths:
@@ -233,7 +235,7 @@ paths:
               $ref: "#/components/schemas/MemberInput"
       responses:
         "201":
-          description: Registered member and membership QR token
+          description: Registered member, QR token and secure onboarding token
           content:
             application/json:
               schema:
@@ -1063,6 +1065,197 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  /members/{memberId}/onboarding-link:
+    post:
+      operationId: createMemberOnboardingLink
+      tags: [members]
+      summary: Issue a fresh expiring member onboarding link
+      description: Revokes any prior active onboarding link. The token is returned once and must be shared manually by staff.
+      security:
+        - clerkSession: []
+      parameters:
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "201":
+          description: Fresh member onboarding token and expiration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnboardingLinkResponse"
+        "403":
+          description: Owner or receptionist access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Active member not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /members/{memberId}/onboarding-link/revoke:
+    post:
+      operationId: revokeMemberOnboardingLink
+      tags: [members]
+      summary: Revoke active public onboarding links for a member
+      security:
+        - clerkSession: []
+      parameters:
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Result of revoking the member's active onboarding link
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnboardingRevocationResponse"
+        "403":
+          description: Owner or receptionist access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Member not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /public/onboarding/{token}:
+    parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 32
+    get:
+      operationId: getPublicMemberOnboarding
+      tags: [member onboarding]
+      summary: Read member questionnaire and trainer decision using a secure link
+      security: []
+      responses:
+        "200":
+          description: Member onboarding state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberOnboardingView"
+        "404":
+          description: Link is invalid, expired, revoked, or unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    post:
+      operationId: submitPublicMemberOnboarding
+      tags: [member onboarding]
+      summary: Submit or update the member fitness questionnaire
+      description: Recommendations are matched only from active saved gym programs; no workout is assigned until a trainer reviews it.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberOnboardingInput"
+      responses:
+        "200":
+          description: Saved questionnaire and active-program recommendations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberOnboardingView"
+        "404":
+          description: Link is invalid, expired, revoked, or unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: The trainer already assigned a program
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /onboarding/reviews:
+    get:
+      operationId: listMemberOnboardingReviews
+      tags: [member onboarding]
+      summary: List submitted member profiles awaiting trainer review
+      security:
+        - clerkSession: []
+      responses:
+        "200":
+          description: Pending onboarding reviews
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OnboardingReviewItem"
+        "403":
+          description: Owner or trainer access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /onboarding/reviews/{memberId}/assign:
+    post:
+      operationId: assignReviewedOnboardingProgram
+      tags: [member onboarding]
+      summary: Approve or change and assign a member program after trainer review
+      security:
+        - clerkSession: []
+      parameters:
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OnboardingAssignmentInput"
+      responses:
+        "201":
+          description: Trainer-reviewed workout assignment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkoutAssignment"
+        "403":
+          description: Owner or trainer access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Pending review, member, or active saved workout program not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Assignment conflicts with an existing active assignment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
   /workouts:
     get:
       operationId: listWorkoutPrograms
@@ -1763,6 +1956,9 @@ components:
         - type: object
           required: [qrToken]
           properties:
+            onboardingToken:
+              type: [string, "null"]
+              minLength: 32
             latestAssessment:
               anyOf:
                 - $ref: "#/components/schemas/FitnessAssessmentResponse"
@@ -2241,6 +2437,115 @@ components:
         upcomingEvents:
           type: array
           items: { $ref: "#/components/schemas/GymEvent" }
+    MemberOnboardingInput:
+      type: object
+      required: [primaryGoal, experience, availableDaysPerWeek, sessionDurationMinutes]
+      properties:
+        primaryGoal:
+          type: string
+          enum: [build_strength, lose_weight, improve_fitness, gain_muscle, general_wellness]
+        experience: { type: string, enum: [beginner, intermediate, advanced] }
+        availableDaysPerWeek: { type: integer, minimum: 1, maximum: 7 }
+        sessionDurationMinutes: { type: integer, minimum: 15, maximum: 180 }
+        equipmentPreferences:
+          type: array
+          maxItems: 7
+          items:
+            type: string
+            enum: [bodyweight, dumbbells, resistance_bands, barbell, machines, cardio_machines, full_gym]
+          default: []
+        limitations: { type: [string, "null"], maxLength: 1200 }
+        notes: { type: [string, "null"], maxLength: 1200 }
+    OnboardingLinkResponse:
+      type: object
+      required: [token, expiresAt]
+      properties:
+        token: { type: string, minLength: 32 }
+        expiresAt: { type: string, format: date-time }
+    OnboardingRevocationResponse:
+      type: object
+      required: [revoked]
+      properties:
+        revoked: { type: boolean }
+    OnboardingProgram:
+      type: object
+      required: [id, name, goal, description, recommendedDaysPerWeek, expectedSessionMinutes, equipmentRequirements, trainerReviewRequired, exercises, matchReasons]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        goal: { type: string }
+        description: { type: [string, "null"] }
+        recommendedDaysPerWeek: { type: integer }
+        expectedSessionMinutes: { type: integer }
+        equipmentRequirements:
+          type: array
+          items: { type: string }
+        trainerReviewRequired: { type: boolean }
+        exercises:
+          type: array
+          items: { $ref: "#/components/schemas/WorkoutExercise" }
+        matchReasons:
+          type: array
+          items: { type: string }
+    MemberOnboardingView:
+      type: object
+      required: [firstName, expiresAt, submitted, questionnaire, reviewStatus, recommendation, alternatives, noMatchReason, assignedProgram]
+      properties:
+        firstName: { type: string }
+        expiresAt: { type: string, format: date-time }
+        submitted: { type: boolean }
+        questionnaire:
+          anyOf:
+            - $ref: "#/components/schemas/MemberOnboardingInput"
+            - type: "null"
+        reviewStatus:
+          type: [string, "null"]
+          enum: [awaiting_review, trainer_approved, null]
+        recommendation:
+          anyOf:
+            - $ref: "#/components/schemas/OnboardingProgram"
+            - type: "null"
+        alternatives:
+          type: array
+          items: { $ref: "#/components/schemas/OnboardingProgram" }
+        noMatchReason: { type: [string, "null"] }
+        assignedProgram:
+          anyOf:
+            - $ref: "#/components/schemas/OnboardingProgram"
+            - type: "null"
+    OnboardingReviewItem:
+      type: object
+      required: [memberId, memberName, memberNumber, primaryGoal, experience, availableDaysPerWeek, sessionDurationMinutes, equipmentPreferences, limitations, notes, recommendation, alternatives, submittedAt]
+      properties:
+        memberId: { type: string, format: uuid }
+        memberName: { type: string }
+        memberNumber: { type: string }
+        primaryGoal:
+          type: string
+          enum: [build_strength, lose_weight, improve_fitness, gain_muscle, general_wellness]
+        experience: { type: string, enum: [beginner, intermediate, advanced] }
+        availableDaysPerWeek: { type: integer, minimum: 1, maximum: 7 }
+        sessionDurationMinutes: { type: integer, minimum: 15, maximum: 180 }
+        equipmentPreferences:
+          type: array
+          items: { type: string }
+        limitations: { type: [string, "null"] }
+        notes: { type: [string, "null"] }
+        recommendation:
+          anyOf:
+            - $ref: "#/components/schemas/OnboardingProgram"
+            - type: "null"
+        alternatives:
+          type: array
+          items: { $ref: "#/components/schemas/OnboardingProgram" }
+        submittedAt: { type: string, format: date-time }
+    OnboardingAssignmentInput:
+      type: object
+      required: [programId, startsOn]
+      properties:
+        programId: { type: string, format: uuid }
+        startsOn: { type: string, format: date }
+        notes: { type: [string, "null"], maxLength: 1000 }
     WorkoutStatus:
       type: string
       enum: [active, archived]
@@ -2281,6 +2586,23 @@ components:
         name: { type: string, minLength: 2, maxLength: 120 }
         goal: { type: string, minLength: 2, maxLength: 200 }
         description: { type: [string, "null"], maxLength: 4000 }
+        goalsSupported:
+          type: array
+          items:
+            type: string
+            enum: [build_strength, lose_weight, improve_fitness, gain_muscle, general_wellness]
+          default: []
+        minimumExperience: { type: string, enum: [beginner, intermediate, advanced], default: beginner }
+        maximumExperience: { type: string, enum: [beginner, intermediate, advanced], default: advanced }
+        recommendedDaysPerWeek: { type: integer, minimum: 1, maximum: 7, default: 3 }
+        expectedSessionMinutes: { type: integer, minimum: 15, maximum: 240, default: 45 }
+        equipmentRequirements:
+          type: array
+          items:
+            type: string
+            enum: [bodyweight, dumbbells, resistance_bands, barbell, machines, cardio_machines]
+          default: []
+        trainerReviewRequired: { type: boolean, default: false }
         exercises:
           type: array
           minItems: 1
@@ -2293,6 +2615,21 @@ components:
         name: { type: string, minLength: 2, maxLength: 120 }
         goal: { type: string, minLength: 2, maxLength: 200 }
         description: { type: [string, "null"], maxLength: 4000 }
+        goalsSupported:
+          type: array
+          items:
+            type: string
+            enum: [build_strength, lose_weight, improve_fitness, gain_muscle, general_wellness]
+        minimumExperience: { type: string, enum: [beginner, intermediate, advanced] }
+        maximumExperience: { type: string, enum: [beginner, intermediate, advanced] }
+        recommendedDaysPerWeek: { type: integer, minimum: 1, maximum: 7 }
+        expectedSessionMinutes: { type: integer, minimum: 15, maximum: 240 }
+        equipmentRequirements:
+          type: array
+          items:
+            type: string
+            enum: [bodyweight, dumbbells, resistance_bands, barbell, machines, cardio_machines]
+        trainerReviewRequired: { type: boolean }
         status: { $ref: "#/components/schemas/WorkoutStatus" }
         exercises:
           type: array
@@ -2301,12 +2638,23 @@ components:
           items: { $ref: "#/components/schemas/WorkoutExerciseInput" }
     WorkoutProgram:
       type: object
-      required: [id, name, goal, description, status, createdAt, updatedAt, exercises, resources]
+      required: [id, name, goal, description, goalsSupported, minimumExperience, maximumExperience, recommendedDaysPerWeek, expectedSessionMinutes, equipmentRequirements, trainerReviewRequired, status, createdAt, updatedAt, exercises, resources]
       properties:
         id: { type: string, format: uuid }
         name: { type: string }
         goal: { type: string }
         description: { type: [string, "null"] }
+        goalsSupported:
+          type: array
+          items: { type: string }
+        minimumExperience: { type: string, enum: [beginner, intermediate, advanced] }
+        maximumExperience: { type: string, enum: [beginner, intermediate, advanced] }
+        recommendedDaysPerWeek: { type: integer, minimum: 1, maximum: 7 }
+        expectedSessionMinutes: { type: integer, minimum: 15, maximum: 240 }
+        equipmentRequirements:
+          type: array
+          items: { type: string }
+        trainerReviewRequired: { type: boolean }
         status: { $ref: "#/components/schemas/WorkoutStatus" }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }

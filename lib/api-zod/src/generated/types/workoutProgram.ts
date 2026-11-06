@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { WorkoutExercise } from './workoutExercise';
+import type { WorkoutProgramMaximumExperience } from './workoutProgramMaximumExperience';
+import type { WorkoutProgramMinimumExperience } from './workoutProgramMinimumExperience';
 import type { WorkoutResource } from './workoutResource';
 import type { WorkoutStatus } from './workoutStatus';
 
@@ -15,6 +17,21 @@ export interface WorkoutProgram {
   goal: string;
   /** @nullable */
   description: string | null;
+  goalsSupported: string[];
+  minimumExperience: WorkoutProgramMinimumExperience;
+  maximumExperience: WorkoutProgramMaximumExperience;
+  /**
+     * @minimum 1
+     * @maximum 7
+     */
+  recommendedDaysPerWeek: number;
+  /**
+     * @minimum 15
+     * @maximum 240
+     */
+  expectedSessionMinutes: number;
+  equipmentRequirements: string[];
+  trainerReviewRequired: boolean;
   status: WorkoutStatus;
   createdAt: Date;
   updatedAt: Date;

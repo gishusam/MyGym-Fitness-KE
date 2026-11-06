@@ -62,6 +62,7 @@ from backend.app.schemas.operations import (
     SubscriptionPage,
     SubscriptionResponse,
 )
+from backend.app.services.onboarding import issue_member_onboarding_token
 from backend.app.services.access import evaluate_access
 from backend.app.services.operations import (
     access_windows,
@@ -443,6 +444,7 @@ def create_member(
         session.flush()
     except IntegrityError:
         _member_conflict_after_integrity_error(session, data.phone)
+    onboarding_token, _expires_at = issue_member_onboarding_token(session, member)
     if data.initial_assessment is not None:
         metrics = data.initial_assessment
         height_m = metrics.height_cm / 100 if metrics.height_cm else None
@@ -464,7 +466,9 @@ def create_member(
         print(f"[MYGYM MEMBER SAVE] constraint={constraint!r}, table={table!r}, sqlstate={sqlstate!r}", flush=True)
         _member_conflict_after_integrity_error(session, data.phone)
     session.refresh(member)
-    return _member_detail_with_fitness(session, member)
+    detail = _member_detail_with_fitness(session, member)
+    detail.onboarding_token = onboarding_token
+    return detail
 
 
 @router.get(

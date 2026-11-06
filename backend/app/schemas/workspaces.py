@@ -95,6 +95,30 @@ class WorkoutProgramInput(ApiModel):
     name: str = Field(min_length=2, max_length=120)
     goal: str = Field(min_length=2, max_length=200)
     description: str | None = Field(default=None, max_length=4000)
+    goals_supported: list[
+        Literal[
+            "build_strength",
+            "lose_weight",
+            "improve_fitness",
+            "gain_muscle",
+            "general_wellness",
+        ]
+    ] = Field(default_factory=list, max_length=5)
+    minimum_experience: Literal["beginner", "intermediate", "advanced"] = "beginner"
+    maximum_experience: Literal["beginner", "intermediate", "advanced"] = "advanced"
+    recommended_days_per_week: int = Field(default=3, ge=1, le=7)
+    expected_session_minutes: int = Field(default=45, ge=15, le=240)
+    equipment_requirements: list[
+        Literal[
+            "bodyweight",
+            "dumbbells",
+            "resistance_bands",
+            "barbell",
+            "machines",
+            "cardio_machines",
+        ]
+    ] = Field(default_factory=list, max_length=6)
+    trainer_review_required: bool = False
     exercises: list[WorkoutExerciseInput] = Field(min_length=1, max_length=30)
 
     @field_validator("name", "goal")
@@ -102,11 +126,42 @@ class WorkoutProgramInput(ApiModel):
     def normalize_text(cls, value: str) -> str:
         return " ".join(value.split())
 
+    @model_validator(mode="after")
+    def validate_experience_range(self) -> "WorkoutProgramInput":
+        order = {"beginner": 0, "intermediate": 1, "advanced": 2}
+        if order[self.minimum_experience] > order[self.maximum_experience]:
+            raise ValueError("Minimum experience cannot exceed maximum experience")
+        return self
+
 
 class WorkoutProgramUpdate(ApiModel):
     name: str | None = Field(default=None, min_length=2, max_length=120)
     goal: str | None = Field(default=None, min_length=2, max_length=200)
     description: str | None = Field(default=None, max_length=4000)
+    goals_supported: list[
+        Literal[
+            "build_strength",
+            "lose_weight",
+            "improve_fitness",
+            "gain_muscle",
+            "general_wellness",
+        ]
+    ] | None = Field(default=None, max_length=5)
+    minimum_experience: Literal["beginner", "intermediate", "advanced"] | None = None
+    maximum_experience: Literal["beginner", "intermediate", "advanced"] | None = None
+    recommended_days_per_week: int | None = Field(default=None, ge=1, le=7)
+    expected_session_minutes: int | None = Field(default=None, ge=15, le=240)
+    equipment_requirements: list[
+        Literal[
+            "bodyweight",
+            "dumbbells",
+            "resistance_bands",
+            "barbell",
+            "machines",
+            "cardio_machines",
+        ]
+    ] | None = Field(default=None, max_length=6)
+    trainer_review_required: bool | None = None
     status: WorkoutStatus | None = None
     exercises: list[WorkoutExerciseInput] | None = Field(default=None, min_length=1, max_length=30)
 
@@ -141,6 +196,13 @@ class WorkoutProgramResponse(ApiModel):
     name: str
     goal: str
     description: str | None
+    goals_supported: list[str]
+    minimum_experience: str
+    maximum_experience: str
+    recommended_days_per_week: int
+    expected_session_minutes: int
+    equipment_requirements: list[str]
+    trainer_review_required: bool
     status: str
     created_at: datetime
     updated_at: datetime

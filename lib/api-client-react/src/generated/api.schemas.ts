@@ -238,6 +238,11 @@ export interface MemberSummary {
 }
 
 export type MemberDetail = MemberSummary & ({
+  /**
+     * @minLength 32
+     * @nullable
+     */
+  onboardingToken?: string | null;
   latestAssessment?: FitnessAssessmentResponse | null;
   /** @minLength 32 */
   qrToken: string;
@@ -658,23 +663,75 @@ export interface DashboardSummary {
   upcomingEvents: GymEvent[];
 }
 
-export type WorkoutStatus = typeof WorkoutStatus[keyof typeof WorkoutStatus];
+export type MemberOnboardingInputPrimaryGoal = typeof MemberOnboardingInputPrimaryGoal[keyof typeof MemberOnboardingInputPrimaryGoal];
 
 
-export const WorkoutStatus = {
-  active: 'active',
-  archived: 'archived',
+export const MemberOnboardingInputPrimaryGoal = {
+  build_strength: 'build_strength',
+  lose_weight: 'lose_weight',
+  improve_fitness: 'improve_fitness',
+  gain_muscle: 'gain_muscle',
+  general_wellness: 'general_wellness',
 } as const;
 
-export type WorkoutAssignmentStatus = typeof WorkoutAssignmentStatus[keyof typeof WorkoutAssignmentStatus];
+export type MemberOnboardingInputExperience = typeof MemberOnboardingInputExperience[keyof typeof MemberOnboardingInputExperience];
 
 
-export const WorkoutAssignmentStatus = {
-  assigned: 'assigned',
-  in_progress: 'in_progress',
-  completed: 'completed',
-  cancelled: 'cancelled',
+export const MemberOnboardingInputExperience = {
+  beginner: 'beginner',
+  intermediate: 'intermediate',
+  advanced: 'advanced',
 } as const;
+
+export type MemberOnboardingInputEquipmentPreferencesItem = typeof MemberOnboardingInputEquipmentPreferencesItem[keyof typeof MemberOnboardingInputEquipmentPreferencesItem];
+
+
+export const MemberOnboardingInputEquipmentPreferencesItem = {
+  bodyweight: 'bodyweight',
+  dumbbells: 'dumbbells',
+  resistance_bands: 'resistance_bands',
+  barbell: 'barbell',
+  machines: 'machines',
+  cardio_machines: 'cardio_machines',
+  full_gym: 'full_gym',
+} as const;
+
+export interface MemberOnboardingInput {
+  primaryGoal: MemberOnboardingInputPrimaryGoal;
+  experience: MemberOnboardingInputExperience;
+  /**
+     * @minimum 1
+     * @maximum 7
+     */
+  availableDaysPerWeek: number;
+  /**
+     * @minimum 15
+     * @maximum 180
+     */
+  sessionDurationMinutes: number;
+  /** @maxItems 7 */
+  equipmentPreferences?: MemberOnboardingInputEquipmentPreferencesItem[];
+  /**
+     * @maxLength 1200
+     * @nullable
+     */
+  limitations?: string | null;
+  /**
+     * @maxLength 1200
+     * @nullable
+     */
+  notes?: string | null;
+}
+
+export interface OnboardingLinkResponse {
+  /** @minLength 32 */
+  token: string;
+  expiresAt: string;
+}
+
+export interface OnboardingRevocationResponse {
+  revoked: boolean;
+}
 
 export interface WorkoutExerciseInput {
   /**
@@ -717,6 +774,119 @@ export type WorkoutExercise = WorkoutExerciseInput & {
   position: number;
 }, 'sets' | 'repetitions' | 'durationSeconds' | 'restSeconds'>>;
 
+export interface OnboardingProgram {
+  id: string;
+  name: string;
+  goal: string;
+  /** @nullable */
+  description: string | null;
+  recommendedDaysPerWeek: number;
+  expectedSessionMinutes: number;
+  equipmentRequirements: string[];
+  trainerReviewRequired: boolean;
+  exercises: WorkoutExercise[];
+  matchReasons: string[];
+}
+
+/**
+ * @nullable
+ */
+export type MemberOnboardingViewReviewStatus = typeof MemberOnboardingViewReviewStatus[keyof typeof MemberOnboardingViewReviewStatus] | null;
+
+
+export const MemberOnboardingViewReviewStatus = {
+  awaiting_review: 'awaiting_review',
+  trainer_approved: 'trainer_approved',
+} as const;
+
+export interface MemberOnboardingView {
+  firstName: string;
+  expiresAt: string;
+  submitted: boolean;
+  questionnaire: MemberOnboardingInput | null;
+  /** @nullable */
+  reviewStatus: MemberOnboardingViewReviewStatus;
+  recommendation: OnboardingProgram | null;
+  alternatives: OnboardingProgram[];
+  /** @nullable */
+  noMatchReason: string | null;
+  assignedProgram: OnboardingProgram | null;
+}
+
+export type OnboardingReviewItemPrimaryGoal = typeof OnboardingReviewItemPrimaryGoal[keyof typeof OnboardingReviewItemPrimaryGoal];
+
+
+export const OnboardingReviewItemPrimaryGoal = {
+  build_strength: 'build_strength',
+  lose_weight: 'lose_weight',
+  improve_fitness: 'improve_fitness',
+  gain_muscle: 'gain_muscle',
+  general_wellness: 'general_wellness',
+} as const;
+
+export type OnboardingReviewItemExperience = typeof OnboardingReviewItemExperience[keyof typeof OnboardingReviewItemExperience];
+
+
+export const OnboardingReviewItemExperience = {
+  beginner: 'beginner',
+  intermediate: 'intermediate',
+  advanced: 'advanced',
+} as const;
+
+export interface OnboardingReviewItem {
+  memberId: string;
+  memberName: string;
+  memberNumber: string;
+  primaryGoal: OnboardingReviewItemPrimaryGoal;
+  experience: OnboardingReviewItemExperience;
+  /**
+     * @minimum 1
+     * @maximum 7
+     */
+  availableDaysPerWeek: number;
+  /**
+     * @minimum 15
+     * @maximum 180
+     */
+  sessionDurationMinutes: number;
+  equipmentPreferences: string[];
+  /** @nullable */
+  limitations: string | null;
+  /** @nullable */
+  notes: string | null;
+  recommendation: OnboardingProgram | null;
+  alternatives: OnboardingProgram[];
+  submittedAt: string;
+}
+
+export interface OnboardingAssignmentInput {
+  programId: string;
+  startsOn: string;
+  /**
+     * @maxLength 1000
+     * @nullable
+     */
+  notes?: string | null;
+}
+
+export type WorkoutStatus = typeof WorkoutStatus[keyof typeof WorkoutStatus];
+
+
+export const WorkoutStatus = {
+  active: 'active',
+  archived: 'archived',
+} as const;
+
+export type WorkoutAssignmentStatus = typeof WorkoutAssignmentStatus[keyof typeof WorkoutAssignmentStatus];
+
+
+export const WorkoutAssignmentStatus = {
+  assigned: 'assigned',
+  in_progress: 'in_progress',
+  completed: 'completed',
+  cancelled: 'cancelled',
+} as const;
+
 export interface WorkoutResource {
   id: string;
   originalFilename: string;
@@ -729,6 +899,47 @@ export interface WorkoutResource {
   createdAt: string;
   downloadUrl: string;
 }
+
+export type WorkoutProgramInputGoalsSupportedItem = typeof WorkoutProgramInputGoalsSupportedItem[keyof typeof WorkoutProgramInputGoalsSupportedItem];
+
+
+export const WorkoutProgramInputGoalsSupportedItem = {
+  build_strength: 'build_strength',
+  lose_weight: 'lose_weight',
+  improve_fitness: 'improve_fitness',
+  gain_muscle: 'gain_muscle',
+  general_wellness: 'general_wellness',
+} as const;
+
+export type WorkoutProgramInputMinimumExperience = typeof WorkoutProgramInputMinimumExperience[keyof typeof WorkoutProgramInputMinimumExperience];
+
+
+export const WorkoutProgramInputMinimumExperience = {
+  beginner: 'beginner',
+  intermediate: 'intermediate',
+  advanced: 'advanced',
+} as const;
+
+export type WorkoutProgramInputMaximumExperience = typeof WorkoutProgramInputMaximumExperience[keyof typeof WorkoutProgramInputMaximumExperience];
+
+
+export const WorkoutProgramInputMaximumExperience = {
+  beginner: 'beginner',
+  intermediate: 'intermediate',
+  advanced: 'advanced',
+} as const;
+
+export type WorkoutProgramInputEquipmentRequirementsItem = typeof WorkoutProgramInputEquipmentRequirementsItem[keyof typeof WorkoutProgramInputEquipmentRequirementsItem];
+
+
+export const WorkoutProgramInputEquipmentRequirementsItem = {
+  bodyweight: 'bodyweight',
+  dumbbells: 'dumbbells',
+  resistance_bands: 'resistance_bands',
+  barbell: 'barbell',
+  machines: 'machines',
+  cardio_machines: 'cardio_machines',
+} as const;
 
 export interface WorkoutProgramInput {
   /**
@@ -746,12 +957,68 @@ export interface WorkoutProgramInput {
      * @nullable
      */
   description?: string | null;
+  goalsSupported?: WorkoutProgramInputGoalsSupportedItem[];
+  minimumExperience?: WorkoutProgramInputMinimumExperience;
+  maximumExperience?: WorkoutProgramInputMaximumExperience;
+  /**
+     * @minimum 1
+     * @maximum 7
+     */
+  recommendedDaysPerWeek?: number;
+  /**
+     * @minimum 15
+     * @maximum 240
+     */
+  expectedSessionMinutes?: number;
+  equipmentRequirements?: WorkoutProgramInputEquipmentRequirementsItem[];
+  trainerReviewRequired?: boolean;
   /**
      * @minItems 1
      * @maxItems 30
      */
   exercises: WorkoutExerciseInput[];
 }
+
+export type WorkoutProgramUpdateGoalsSupportedItem = typeof WorkoutProgramUpdateGoalsSupportedItem[keyof typeof WorkoutProgramUpdateGoalsSupportedItem];
+
+
+export const WorkoutProgramUpdateGoalsSupportedItem = {
+  build_strength: 'build_strength',
+  lose_weight: 'lose_weight',
+  improve_fitness: 'improve_fitness',
+  gain_muscle: 'gain_muscle',
+  general_wellness: 'general_wellness',
+} as const;
+
+export type WorkoutProgramUpdateMinimumExperience = typeof WorkoutProgramUpdateMinimumExperience[keyof typeof WorkoutProgramUpdateMinimumExperience];
+
+
+export const WorkoutProgramUpdateMinimumExperience = {
+  beginner: 'beginner',
+  intermediate: 'intermediate',
+  advanced: 'advanced',
+} as const;
+
+export type WorkoutProgramUpdateMaximumExperience = typeof WorkoutProgramUpdateMaximumExperience[keyof typeof WorkoutProgramUpdateMaximumExperience];
+
+
+export const WorkoutProgramUpdateMaximumExperience = {
+  beginner: 'beginner',
+  intermediate: 'intermediate',
+  advanced: 'advanced',
+} as const;
+
+export type WorkoutProgramUpdateEquipmentRequirementsItem = typeof WorkoutProgramUpdateEquipmentRequirementsItem[keyof typeof WorkoutProgramUpdateEquipmentRequirementsItem];
+
+
+export const WorkoutProgramUpdateEquipmentRequirementsItem = {
+  bodyweight: 'bodyweight',
+  dumbbells: 'dumbbells',
+  resistance_bands: 'resistance_bands',
+  barbell: 'barbell',
+  machines: 'machines',
+  cardio_machines: 'cardio_machines',
+} as const;
 
 export interface WorkoutProgramUpdate {
   /**
@@ -769,6 +1036,21 @@ export interface WorkoutProgramUpdate {
      * @nullable
      */
   description?: string | null;
+  goalsSupported?: WorkoutProgramUpdateGoalsSupportedItem[];
+  minimumExperience?: WorkoutProgramUpdateMinimumExperience;
+  maximumExperience?: WorkoutProgramUpdateMaximumExperience;
+  /**
+     * @minimum 1
+     * @maximum 7
+     */
+  recommendedDaysPerWeek?: number;
+  /**
+     * @minimum 15
+     * @maximum 240
+     */
+  expectedSessionMinutes?: number;
+  equipmentRequirements?: WorkoutProgramUpdateEquipmentRequirementsItem[];
+  trainerReviewRequired?: boolean;
   status?: WorkoutStatus;
   /**
      * @minItems 1
@@ -777,12 +1059,45 @@ export interface WorkoutProgramUpdate {
   exercises?: WorkoutExerciseInput[];
 }
 
+export type WorkoutProgramMinimumExperience = typeof WorkoutProgramMinimumExperience[keyof typeof WorkoutProgramMinimumExperience];
+
+
+export const WorkoutProgramMinimumExperience = {
+  beginner: 'beginner',
+  intermediate: 'intermediate',
+  advanced: 'advanced',
+} as const;
+
+export type WorkoutProgramMaximumExperience = typeof WorkoutProgramMaximumExperience[keyof typeof WorkoutProgramMaximumExperience];
+
+
+export const WorkoutProgramMaximumExperience = {
+  beginner: 'beginner',
+  intermediate: 'intermediate',
+  advanced: 'advanced',
+} as const;
+
 export interface WorkoutProgram {
   id: string;
   name: string;
   goal: string;
   /** @nullable */
   description: string | null;
+  goalsSupported: string[];
+  minimumExperience: WorkoutProgramMinimumExperience;
+  maximumExperience: WorkoutProgramMaximumExperience;
+  /**
+     * @minimum 1
+     * @maximum 7
+     */
+  recommendedDaysPerWeek: number;
+  /**
+     * @minimum 15
+     * @maximum 240
+     */
+  expectedSessionMinutes: number;
+  equipmentRequirements: string[];
+  trainerReviewRequired: boolean;
   status: WorkoutStatus;
   createdAt: string;
   updatedAt: string;

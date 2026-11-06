@@ -12,6 +12,8 @@ from backend.app.models import (
     EventRegistration,
     GymEvent,
     GymSettings,
+    MemberFitnessProfile,
+    MemberOnboardingToken,
     StaffUser,
     WorkoutAssignment,
     WorkoutExercise,

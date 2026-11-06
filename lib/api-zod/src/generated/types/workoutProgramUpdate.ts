@@ -6,6 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { WorkoutExerciseInput } from './workoutExerciseInput';
+import type { WorkoutProgramUpdateEquipmentRequirementsItem } from './workoutProgramUpdateEquipmentRequirementsItem';
+import type { WorkoutProgramUpdateGoalsSupportedItem } from './workoutProgramUpdateGoalsSupportedItem';
+import type { WorkoutProgramUpdateMaximumExperience } from './workoutProgramUpdateMaximumExperience';
+import type { WorkoutProgramUpdateMinimumExperience } from './workoutProgramUpdateMinimumExperience';
 import type { WorkoutStatus } from './workoutStatus';
 
 export interface WorkoutProgramUpdate {
@@ -24,6 +28,21 @@ export interface WorkoutProgramUpdate {
      * @nullable
      */
   description?: string | null;
+  goalsSupported?: WorkoutProgramUpdateGoalsSupportedItem[];
+  minimumExperience?: WorkoutProgramUpdateMinimumExperience;
+  maximumExperience?: WorkoutProgramUpdateMaximumExperience;
+  /**
+     * @minimum 1
+     * @maximum 7
+     */
+  recommendedDaysPerWeek?: number;
+  /**
+     * @minimum 15
+     * @maximum 240
+     */
+  expectedSessionMinutes?: number;
+  equipmentRequirements?: WorkoutProgramUpdateEquipmentRequirementsItem[];
+  trainerReviewRequired?: boolean;
   status?: WorkoutStatus;
   /**
      * @minItems 1

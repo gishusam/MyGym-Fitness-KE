@@ -4,6 +4,8 @@ import uuid
 from datetime import date, datetime
 
 from sqlalchemy import (
+    JSON,
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
@@ -29,6 +31,22 @@ class WorkoutProgram(Base):
             "status IN ('active', 'archived')",
             name="workout_programs_status_check",
         ),
+        CheckConstraint(
+            "minimum_experience IN ('beginner', 'intermediate', 'advanced')",
+            name="workout_programs_minimum_experience_check",
+        ),
+        CheckConstraint(
+            "maximum_experience IN ('beginner', 'intermediate', 'advanced')",
+            name="workout_programs_maximum_experience_check",
+        ),
+        CheckConstraint(
+            "recommended_days_per_week BETWEEN 1 AND 7",
+            name="workout_programs_days_per_week_check",
+        ),
+        CheckConstraint(
+            "expected_session_minutes BETWEEN 15 AND 240",
+            name="workout_programs_session_minutes_check",
+        ),
         Index("ix_workout_programs_status_name", "status", "name"),
     )
 
@@ -38,6 +56,27 @@ class WorkoutProgram(Base):
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     goal: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
+    goals_supported: Mapped[list[str]] = mapped_column(
+        JSON, nullable=False, default=list, server_default=text("'[]'")
+    )
+    minimum_experience: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="beginner", server_default="beginner"
+    )
+    maximum_experience: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="advanced", server_default="advanced"
+    )
+    recommended_days_per_week: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=3, server_default="3"
+    )
+    expected_session_minutes: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=45, server_default="45"
+    )
+    equipment_requirements: Mapped[list[str]] = mapped_column(
+        JSON, nullable=False, default=list, server_default=text("'[]'")
+    )
+    trainer_review_required: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, default="active", server_default="active"
     )

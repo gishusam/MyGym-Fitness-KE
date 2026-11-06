@@ -9,6 +9,11 @@ import type { FitnessAssessmentResponse } from './fitnessAssessmentResponse';
 import type { MemberSummary } from './memberSummary';
 
 export type MemberDetail = MemberSummary & ({
+  /**
+     * @minLength 32
+     * @nullable
+     */
+  onboardingToken?: string | null;
   latestAssessment?: FitnessAssessmentResponse | null;
   /** @minLength 32 */
   qrToken: string;

@@ -5,6 +5,7 @@ from backend.app.models.gym_event import EventRegistration, GymEvent
 from backend.app.models.gym_settings import GymSettings
 from backend.app.models.member import Member, MemberStatus
 from backend.app.models.member_onboarding import MemberFitnessProfile, MemberOnboardingToken
+from backend.app.models.member_workout_link import MemberWorkoutLink
 from backend.app.models.membership_upgrade import MembershipUpgrade
 from backend.app.models.membership import (
     MembershipPlan,

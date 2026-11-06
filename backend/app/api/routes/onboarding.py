@@ -443,6 +443,7 @@ def assign_reviewed_onboarding_program(
         notes=data.notes,
     )
     session.add(assignment)
+    session.flush()  # Persist assignment before updating its FK reference.
     profile.review_status = "trainer_approved"
     profile.final_program_id = program.id
     profile.workout_assignment_id = assignment.id

@@ -22,6 +22,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import { AttendancePage, MembersPage, PaymentsPage, PlansPage, SubscriptionsPage } from '@/pages/operations';
 import { EventsPage, StaffManagementPage, TrainerMembersPage, WorkoutsPage, WorkspaceOverview } from '@/pages/workspaces';
+import { MemberOnboardingPage } from '@/pages/member-onboarding';
 import './index.css';
 
 const queryClient = new QueryClient();
@@ -532,6 +533,7 @@ function RoutedPages() {
     <Route path="/" component={HomePage} />
     <Route path="/sign-in/*?" component={SignInPage} />
     <Route path="/sign-up/*?" component={SignUpPage} />
+    <Route path="/onboarding/:token">{(params) => <MemberOnboardingPage token={params.token} />}</Route>
     <Route path="/dashboard"><Show when="signed-in"><StaffDashboard /></Show><Show when="signed-out"><Redirect to="/" /></Show></Route>
     <Route path="/settings/gym"><Show when="signed-in"><GymSettingsPage /></Show><Show when="signed-out"><Redirect to="/" /></Show></Route>
     <Route path="/members"><Show when="signed-in"><MembersPage /></Show><Show when="signed-out"><Redirect to="/" /></Show></Route>

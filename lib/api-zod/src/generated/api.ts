@@ -190,6 +190,8 @@ export const CreateMemberBody = zod.object({
   "email": zod.string().email().max(createMemberBodyEmailMax).nullish()
 })
 
+export const createMemberResponseTwoOnboardingTokenMin = 32;
+
 export const createMemberResponseTwoLatestAssessmentOneOneWeightKgExclusiveMin = 0;
 export const createMemberResponseTwoLatestAssessmentOneOneWeightKgMax = 500;
 
@@ -219,6 +221,7 @@ export const CreateMemberResponse = zod.object({
   "registeredAt": zod.coerce.date(),
   "initials": zod.string()
 }).and(zod.object({
+  "onboardingToken": zod.string().min(createMemberResponseTwoOnboardingTokenMin).nullish(),
   "latestAssessment": zod.union([zod.object({
   "weightKg": zod.number().gt(createMemberResponseTwoLatestAssessmentOneOneWeightKgExclusiveMin).max(createMemberResponseTwoLatestAssessmentOneOneWeightKgMax).nullish(),
   "heightCm": zod.number().gt(createMemberResponseTwoLatestAssessmentOneOneHeightCmExclusiveMin).max(createMemberResponseTwoLatestAssessmentOneOneHeightCmMax).nullish(),
@@ -240,6 +243,8 @@ export const CreateMemberResponse = zod.object({
 export const GetMemberDetailParams = zod.object({
   "memberId": zod.coerce.string().uuid()
 })
+
+export const getMemberDetailResponseTwoOnboardingTokenMin = 32;
 
 export const getMemberDetailResponseTwoLatestAssessmentOneOneWeightKgExclusiveMin = 0;
 export const getMemberDetailResponseTwoLatestAssessmentOneOneWeightKgMax = 500;
@@ -270,6 +275,7 @@ export const GetMemberDetailResponse = zod.object({
   "registeredAt": zod.coerce.date(),
   "initials": zod.string()
 }).and(zod.object({
+  "onboardingToken": zod.string().min(getMemberDetailResponseTwoOnboardingTokenMin).nullish(),
   "latestAssessment": zod.union([zod.object({
   "weightKg": zod.number().gt(getMemberDetailResponseTwoLatestAssessmentOneOneWeightKgExclusiveMin).max(getMemberDetailResponseTwoLatestAssessmentOneOneWeightKgMax).nullish(),
   "heightCm": zod.number().gt(getMemberDetailResponseTwoLatestAssessmentOneOneHeightCmExclusiveMin).max(getMemberDetailResponseTwoLatestAssessmentOneOneHeightCmMax).nullish(),
@@ -309,6 +315,8 @@ export const UpdateMemberBody = zod.object({
   "status": zod.enum(['active', 'inactive']).optional()
 })
 
+export const updateMemberResponseTwoOnboardingTokenMin = 32;
+
 export const updateMemberResponseTwoLatestAssessmentOneOneWeightKgExclusiveMin = 0;
 export const updateMemberResponseTwoLatestAssessmentOneOneWeightKgMax = 500;
 
@@ -338,6 +346,7 @@ export const UpdateMemberResponse = zod.object({
   "registeredAt": zod.coerce.date(),
   "initials": zod.string()
 }).and(zod.object({
+  "onboardingToken": zod.string().min(updateMemberResponseTwoOnboardingTokenMin).nullish(),
   "latestAssessment": zod.union([zod.object({
   "weightKg": zod.number().gt(updateMemberResponseTwoLatestAssessmentOneOneWeightKgExclusiveMin).max(updateMemberResponseTwoLatestAssessmentOneOneWeightKgMax).nullish(),
   "heightCm": zod.number().gt(updateMemberResponseTwoLatestAssessmentOneOneHeightCmExclusiveMin).max(updateMemberResponseTwoLatestAssessmentOneOneHeightCmMax).nullish(),
@@ -1019,6 +1028,493 @@ export const UpdateStaffResponse = zod.object({
 
 
 /**
+ * Revokes any prior active onboarding link. The token is returned once and must be shared manually by staff.
+ * @summary Issue a fresh expiring member onboarding link
+ */
+export const CreateMemberOnboardingLinkParams = zod.object({
+  "memberId": zod.coerce.string().uuid()
+})
+
+export const createMemberOnboardingLinkResponseTokenMin = 32;
+
+
+
+export const CreateMemberOnboardingLinkResponse = zod.object({
+  "token": zod.string().min(createMemberOnboardingLinkResponseTokenMin),
+  "expiresAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Revoke active public onboarding links for a member
+ */
+export const RevokeMemberOnboardingLinkParams = zod.object({
+  "memberId": zod.coerce.string().uuid()
+})
+
+export const RevokeMemberOnboardingLinkResponse = zod.object({
+  "revoked": zod.boolean()
+})
+
+
+/**
+ * @summary Read member questionnaire and trainer decision using a secure link
+ */
+export const getPublicMemberOnboardingPathTokenMin = 32;
+
+
+
+export const GetPublicMemberOnboardingParams = zod.object({
+  "token": zod.coerce.string().min(getPublicMemberOnboardingPathTokenMin)
+})
+
+export const getPublicMemberOnboardingResponseQuestionnaireOneAvailableDaysPerWeekMax = 7;
+
+export const getPublicMemberOnboardingResponseQuestionnaireOneSessionDurationMinutesMin = 15;
+export const getPublicMemberOnboardingResponseQuestionnaireOneSessionDurationMinutesMax = 180;
+
+export const getPublicMemberOnboardingResponseQuestionnaireOneEquipmentPreferencesDefault = [];
+export const getPublicMemberOnboardingResponseQuestionnaireOneEquipmentPreferencesMax = 7;
+
+export const getPublicMemberOnboardingResponseQuestionnaireOneLimitationsMax = 1200;
+
+export const getPublicMemberOnboardingResponseQuestionnaireOneNotesMax = 1200;
+
+export const getPublicMemberOnboardingResponseRecommendationOneExercisesItemOneNameMin = 2;
+export const getPublicMemberOnboardingResponseRecommendationOneExercisesItemOneNameMax = 120;
+
+export const getPublicMemberOnboardingResponseRecommendationOneExercisesItemOneSetsDefault = 1;
+export const getPublicMemberOnboardingResponseRecommendationOneExercisesItemOneSetsMax = 50;
+
+export const getPublicMemberOnboardingResponseRecommendationOneExercisesItemOneRepetitionsMax = 1000;
+
+export const getPublicMemberOnboardingResponseRecommendationOneExercisesItemOneDurationSecondsMax = 86400;
+
+export const getPublicMemberOnboardingResponseRecommendationOneExercisesItemOneRestSecondsMin = 0;
+export const getPublicMemberOnboardingResponseRecommendationOneExercisesItemOneRestSecondsMax = 3600;
+
+export const getPublicMemberOnboardingResponseRecommendationOneExercisesItemTwoPositionMin = 0;
+
+export const getPublicMemberOnboardingResponseAlternativesItemExercisesItemOneNameMin = 2;
+export const getPublicMemberOnboardingResponseAlternativesItemExercisesItemOneNameMax = 120;
+
+export const getPublicMemberOnboardingResponseAlternativesItemExercisesItemOneSetsDefault = 1;
+export const getPublicMemberOnboardingResponseAlternativesItemExercisesItemOneSetsMax = 50;
+
+export const getPublicMemberOnboardingResponseAlternativesItemExercisesItemOneRepetitionsMax = 1000;
+
+export const getPublicMemberOnboardingResponseAlternativesItemExercisesItemOneDurationSecondsMax = 86400;
+
+export const getPublicMemberOnboardingResponseAlternativesItemExercisesItemOneRestSecondsMin = 0;
+export const getPublicMemberOnboardingResponseAlternativesItemExercisesItemOneRestSecondsMax = 3600;
+
+export const getPublicMemberOnboardingResponseAlternativesItemExercisesItemTwoPositionMin = 0;
+
+export const getPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneNameMin = 2;
+export const getPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneNameMax = 120;
+
+export const getPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneSetsDefault = 1;
+export const getPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneSetsMax = 50;
+
+export const getPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneRepetitionsMax = 1000;
+
+export const getPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneDurationSecondsMax = 86400;
+
+export const getPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneRestSecondsMin = 0;
+export const getPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneRestSecondsMax = 3600;
+
+export const getPublicMemberOnboardingResponseAssignedProgramOneExercisesItemTwoPositionMin = 0;
+
+
+
+export const GetPublicMemberOnboardingResponse = zod.object({
+  "firstName": zod.string(),
+  "expiresAt": zod.coerce.date(),
+  "submitted": zod.boolean(),
+  "questionnaire": zod.union([zod.object({
+  "primaryGoal": zod.enum(['build_strength', 'lose_weight', 'improve_fitness', 'gain_muscle', 'general_wellness']),
+  "experience": zod.enum(['beginner', 'intermediate', 'advanced']),
+  "availableDaysPerWeek": zod.number().int().min(1).max(getPublicMemberOnboardingResponseQuestionnaireOneAvailableDaysPerWeekMax),
+  "sessionDurationMinutes": zod.number().int().min(getPublicMemberOnboardingResponseQuestionnaireOneSessionDurationMinutesMin).max(getPublicMemberOnboardingResponseQuestionnaireOneSessionDurationMinutesMax),
+  "equipmentPreferences": zod.array(zod.enum(['bodyweight', 'dumbbells', 'resistance_bands', 'barbell', 'machines', 'cardio_machines', 'full_gym'])).max(getPublicMemberOnboardingResponseQuestionnaireOneEquipmentPreferencesMax).default(getPublicMemberOnboardingResponseQuestionnaireOneEquipmentPreferencesDefault),
+  "limitations": zod.string().max(getPublicMemberOnboardingResponseQuestionnaireOneLimitationsMax).nullish(),
+  "notes": zod.string().max(getPublicMemberOnboardingResponseQuestionnaireOneNotesMax).nullish()
+}),zod.null()]),
+  "reviewStatus": zod.union([zod.literal('awaiting_review'),zod.literal('trainer_approved'),zod.literal(null)]).nullable(),
+  "recommendation": zod.union([zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "goal": zod.string(),
+  "description": zod.string().nullable(),
+  "recommendedDaysPerWeek": zod.number().int(),
+  "expectedSessionMinutes": zod.number().int(),
+  "equipmentRequirements": zod.array(zod.string()),
+  "trainerReviewRequired": zod.boolean(),
+  "exercises": zod.array(zod.object({
+  "name": zod.string().min(getPublicMemberOnboardingResponseRecommendationOneExercisesItemOneNameMin).max(getPublicMemberOnboardingResponseRecommendationOneExercisesItemOneNameMax),
+  "sets": zod.number().int().min(1).max(getPublicMemberOnboardingResponseRecommendationOneExercisesItemOneSetsMax).default(getPublicMemberOnboardingResponseRecommendationOneExercisesItemOneSetsDefault),
+  "repetitions": zod.number().int().min(1).max(getPublicMemberOnboardingResponseRecommendationOneExercisesItemOneRepetitionsMax).nullable(),
+  "durationSeconds": zod.number().int().min(1).max(getPublicMemberOnboardingResponseRecommendationOneExercisesItemOneDurationSecondsMax).nullable(),
+  "restSeconds": zod.number().int().min(getPublicMemberOnboardingResponseRecommendationOneExercisesItemOneRestSecondsMin).max(getPublicMemberOnboardingResponseRecommendationOneExercisesItemOneRestSecondsMax).nullable()
+}).and(zod.object({
+  "id": zod.string().uuid(),
+  "position": zod.number().int().min(getPublicMemberOnboardingResponseRecommendationOneExercisesItemTwoPositionMin)
+}))),
+  "matchReasons": zod.array(zod.string())
+}),zod.null()]),
+  "alternatives": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "goal": zod.string(),
+  "description": zod.string().nullable(),
+  "recommendedDaysPerWeek": zod.number().int(),
+  "expectedSessionMinutes": zod.number().int(),
+  "equipmentRequirements": zod.array(zod.string()),
+  "trainerReviewRequired": zod.boolean(),
+  "exercises": zod.array(zod.object({
+  "name": zod.string().min(getPublicMemberOnboardingResponseAlternativesItemExercisesItemOneNameMin).max(getPublicMemberOnboardingResponseAlternativesItemExercisesItemOneNameMax),
+  "sets": zod.number().int().min(1).max(getPublicMemberOnboardingResponseAlternativesItemExercisesItemOneSetsMax).default(getPublicMemberOnboardingResponseAlternativesItemExercisesItemOneSetsDefault),
+  "repetitions": zod.number().int().min(1).max(getPublicMemberOnboardingResponseAlternativesItemExercisesItemOneRepetitionsMax).nullable(),
+  "durationSeconds": zod.number().int().min(1).max(getPublicMemberOnboardingResponseAlternativesItemExercisesItemOneDurationSecondsMax).nullable(),
+  "restSeconds": zod.number().int().min(getPublicMemberOnboardingResponseAlternativesItemExercisesItemOneRestSecondsMin).max(getPublicMemberOnboardingResponseAlternativesItemExercisesItemOneRestSecondsMax).nullable()
+}).and(zod.object({
+  "id": zod.string().uuid(),
+  "position": zod.number().int().min(getPublicMemberOnboardingResponseAlternativesItemExercisesItemTwoPositionMin)
+}))),
+  "matchReasons": zod.array(zod.string())
+})),
+  "noMatchReason": zod.string().nullable(),
+  "assignedProgram": zod.union([zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "goal": zod.string(),
+  "description": zod.string().nullable(),
+  "recommendedDaysPerWeek": zod.number().int(),
+  "expectedSessionMinutes": zod.number().int(),
+  "equipmentRequirements": zod.array(zod.string()),
+  "trainerReviewRequired": zod.boolean(),
+  "exercises": zod.array(zod.object({
+  "name": zod.string().min(getPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneNameMin).max(getPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneNameMax),
+  "sets": zod.number().int().min(1).max(getPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneSetsMax).default(getPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneSetsDefault),
+  "repetitions": zod.number().int().min(1).max(getPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneRepetitionsMax).nullable(),
+  "durationSeconds": zod.number().int().min(1).max(getPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneDurationSecondsMax).nullable(),
+  "restSeconds": zod.number().int().min(getPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneRestSecondsMin).max(getPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneRestSecondsMax).nullable()
+}).and(zod.object({
+  "id": zod.string().uuid(),
+  "position": zod.number().int().min(getPublicMemberOnboardingResponseAssignedProgramOneExercisesItemTwoPositionMin)
+}))),
+  "matchReasons": zod.array(zod.string())
+}),zod.null()])
+})
+
+
+/**
+ * Recommendations are matched only from active saved gym programs; no workout is assigned until a trainer reviews it.
+ * @summary Submit or update the member fitness questionnaire
+ */
+export const submitPublicMemberOnboardingPathTokenMin = 32;
+
+
+
+export const SubmitPublicMemberOnboardingParams = zod.object({
+  "token": zod.coerce.string().min(submitPublicMemberOnboardingPathTokenMin)
+})
+
+export const submitPublicMemberOnboardingBodyAvailableDaysPerWeekMax = 7;
+
+export const submitPublicMemberOnboardingBodySessionDurationMinutesMin = 15;
+export const submitPublicMemberOnboardingBodySessionDurationMinutesMax = 180;
+
+export const submitPublicMemberOnboardingBodyEquipmentPreferencesDefault = [];
+export const submitPublicMemberOnboardingBodyEquipmentPreferencesMax = 7;
+
+export const submitPublicMemberOnboardingBodyLimitationsMax = 1200;
+
+export const submitPublicMemberOnboardingBodyNotesMax = 1200;
+
+
+
+export const SubmitPublicMemberOnboardingBody = zod.object({
+  "primaryGoal": zod.enum(['build_strength', 'lose_weight', 'improve_fitness', 'gain_muscle', 'general_wellness']),
+  "experience": zod.enum(['beginner', 'intermediate', 'advanced']),
+  "availableDaysPerWeek": zod.number().int().min(1).max(submitPublicMemberOnboardingBodyAvailableDaysPerWeekMax),
+  "sessionDurationMinutes": zod.number().int().min(submitPublicMemberOnboardingBodySessionDurationMinutesMin).max(submitPublicMemberOnboardingBodySessionDurationMinutesMax),
+  "equipmentPreferences": zod.array(zod.enum(['bodyweight', 'dumbbells', 'resistance_bands', 'barbell', 'machines', 'cardio_machines', 'full_gym'])).max(submitPublicMemberOnboardingBodyEquipmentPreferencesMax).default(submitPublicMemberOnboardingBodyEquipmentPreferencesDefault),
+  "limitations": zod.string().max(submitPublicMemberOnboardingBodyLimitationsMax).nullish(),
+  "notes": zod.string().max(submitPublicMemberOnboardingBodyNotesMax).nullish()
+})
+
+export const submitPublicMemberOnboardingResponseQuestionnaireOneAvailableDaysPerWeekMax = 7;
+
+export const submitPublicMemberOnboardingResponseQuestionnaireOneSessionDurationMinutesMin = 15;
+export const submitPublicMemberOnboardingResponseQuestionnaireOneSessionDurationMinutesMax = 180;
+
+export const submitPublicMemberOnboardingResponseQuestionnaireOneEquipmentPreferencesDefault = [];
+export const submitPublicMemberOnboardingResponseQuestionnaireOneEquipmentPreferencesMax = 7;
+
+export const submitPublicMemberOnboardingResponseQuestionnaireOneLimitationsMax = 1200;
+
+export const submitPublicMemberOnboardingResponseQuestionnaireOneNotesMax = 1200;
+
+export const submitPublicMemberOnboardingResponseRecommendationOneExercisesItemOneNameMin = 2;
+export const submitPublicMemberOnboardingResponseRecommendationOneExercisesItemOneNameMax = 120;
+
+export const submitPublicMemberOnboardingResponseRecommendationOneExercisesItemOneSetsDefault = 1;
+export const submitPublicMemberOnboardingResponseRecommendationOneExercisesItemOneSetsMax = 50;
+
+export const submitPublicMemberOnboardingResponseRecommendationOneExercisesItemOneRepetitionsMax = 1000;
+
+export const submitPublicMemberOnboardingResponseRecommendationOneExercisesItemOneDurationSecondsMax = 86400;
+
+export const submitPublicMemberOnboardingResponseRecommendationOneExercisesItemOneRestSecondsMin = 0;
+export const submitPublicMemberOnboardingResponseRecommendationOneExercisesItemOneRestSecondsMax = 3600;
+
+export const submitPublicMemberOnboardingResponseRecommendationOneExercisesItemTwoPositionMin = 0;
+
+export const submitPublicMemberOnboardingResponseAlternativesItemExercisesItemOneNameMin = 2;
+export const submitPublicMemberOnboardingResponseAlternativesItemExercisesItemOneNameMax = 120;
+
+export const submitPublicMemberOnboardingResponseAlternativesItemExercisesItemOneSetsDefault = 1;
+export const submitPublicMemberOnboardingResponseAlternativesItemExercisesItemOneSetsMax = 50;
+
+export const submitPublicMemberOnboardingResponseAlternativesItemExercisesItemOneRepetitionsMax = 1000;
+
+export const submitPublicMemberOnboardingResponseAlternativesItemExercisesItemOneDurationSecondsMax = 86400;
+
+export const submitPublicMemberOnboardingResponseAlternativesItemExercisesItemOneRestSecondsMin = 0;
+export const submitPublicMemberOnboardingResponseAlternativesItemExercisesItemOneRestSecondsMax = 3600;
+
+export const submitPublicMemberOnboardingResponseAlternativesItemExercisesItemTwoPositionMin = 0;
+
+export const submitPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneNameMin = 2;
+export const submitPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneNameMax = 120;
+
+export const submitPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneSetsDefault = 1;
+export const submitPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneSetsMax = 50;
+
+export const submitPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneRepetitionsMax = 1000;
+
+export const submitPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneDurationSecondsMax = 86400;
+
+export const submitPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneRestSecondsMin = 0;
+export const submitPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneRestSecondsMax = 3600;
+
+export const submitPublicMemberOnboardingResponseAssignedProgramOneExercisesItemTwoPositionMin = 0;
+
+
+
+export const SubmitPublicMemberOnboardingResponse = zod.object({
+  "firstName": zod.string(),
+  "expiresAt": zod.coerce.date(),
+  "submitted": zod.boolean(),
+  "questionnaire": zod.union([zod.object({
+  "primaryGoal": zod.enum(['build_strength', 'lose_weight', 'improve_fitness', 'gain_muscle', 'general_wellness']),
+  "experience": zod.enum(['beginner', 'intermediate', 'advanced']),
+  "availableDaysPerWeek": zod.number().int().min(1).max(submitPublicMemberOnboardingResponseQuestionnaireOneAvailableDaysPerWeekMax),
+  "sessionDurationMinutes": zod.number().int().min(submitPublicMemberOnboardingResponseQuestionnaireOneSessionDurationMinutesMin).max(submitPublicMemberOnboardingResponseQuestionnaireOneSessionDurationMinutesMax),
+  "equipmentPreferences": zod.array(zod.enum(['bodyweight', 'dumbbells', 'resistance_bands', 'barbell', 'machines', 'cardio_machines', 'full_gym'])).max(submitPublicMemberOnboardingResponseQuestionnaireOneEquipmentPreferencesMax).default(submitPublicMemberOnboardingResponseQuestionnaireOneEquipmentPreferencesDefault),
+  "limitations": zod.string().max(submitPublicMemberOnboardingResponseQuestionnaireOneLimitationsMax).nullish(),
+  "notes": zod.string().max(submitPublicMemberOnboardingResponseQuestionnaireOneNotesMax).nullish()
+}),zod.null()]),
+  "reviewStatus": zod.union([zod.literal('awaiting_review'),zod.literal('trainer_approved'),zod.literal(null)]).nullable(),
+  "recommendation": zod.union([zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "goal": zod.string(),
+  "description": zod.string().nullable(),
+  "recommendedDaysPerWeek": zod.number().int(),
+  "expectedSessionMinutes": zod.number().int(),
+  "equipmentRequirements": zod.array(zod.string()),
+  "trainerReviewRequired": zod.boolean(),
+  "exercises": zod.array(zod.object({
+  "name": zod.string().min(submitPublicMemberOnboardingResponseRecommendationOneExercisesItemOneNameMin).max(submitPublicMemberOnboardingResponseRecommendationOneExercisesItemOneNameMax),
+  "sets": zod.number().int().min(1).max(submitPublicMemberOnboardingResponseRecommendationOneExercisesItemOneSetsMax).default(submitPublicMemberOnboardingResponseRecommendationOneExercisesItemOneSetsDefault),
+  "repetitions": zod.number().int().min(1).max(submitPublicMemberOnboardingResponseRecommendationOneExercisesItemOneRepetitionsMax).nullable(),
+  "durationSeconds": zod.number().int().min(1).max(submitPublicMemberOnboardingResponseRecommendationOneExercisesItemOneDurationSecondsMax).nullable(),
+  "restSeconds": zod.number().int().min(submitPublicMemberOnboardingResponseRecommendationOneExercisesItemOneRestSecondsMin).max(submitPublicMemberOnboardingResponseRecommendationOneExercisesItemOneRestSecondsMax).nullable()
+}).and(zod.object({
+  "id": zod.string().uuid(),
+  "position": zod.number().int().min(submitPublicMemberOnboardingResponseRecommendationOneExercisesItemTwoPositionMin)
+}))),
+  "matchReasons": zod.array(zod.string())
+}),zod.null()]),
+  "alternatives": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "goal": zod.string(),
+  "description": zod.string().nullable(),
+  "recommendedDaysPerWeek": zod.number().int(),
+  "expectedSessionMinutes": zod.number().int(),
+  "equipmentRequirements": zod.array(zod.string()),
+  "trainerReviewRequired": zod.boolean(),
+  "exercises": zod.array(zod.object({
+  "name": zod.string().min(submitPublicMemberOnboardingResponseAlternativesItemExercisesItemOneNameMin).max(submitPublicMemberOnboardingResponseAlternativesItemExercisesItemOneNameMax),
+  "sets": zod.number().int().min(1).max(submitPublicMemberOnboardingResponseAlternativesItemExercisesItemOneSetsMax).default(submitPublicMemberOnboardingResponseAlternativesItemExercisesItemOneSetsDefault),
+  "repetitions": zod.number().int().min(1).max(submitPublicMemberOnboardingResponseAlternativesItemExercisesItemOneRepetitionsMax).nullable(),
+  "durationSeconds": zod.number().int().min(1).max(submitPublicMemberOnboardingResponseAlternativesItemExercisesItemOneDurationSecondsMax).nullable(),
+  "restSeconds": zod.number().int().min(submitPublicMemberOnboardingResponseAlternativesItemExercisesItemOneRestSecondsMin).max(submitPublicMemberOnboardingResponseAlternativesItemExercisesItemOneRestSecondsMax).nullable()
+}).and(zod.object({
+  "id": zod.string().uuid(),
+  "position": zod.number().int().min(submitPublicMemberOnboardingResponseAlternativesItemExercisesItemTwoPositionMin)
+}))),
+  "matchReasons": zod.array(zod.string())
+})),
+  "noMatchReason": zod.string().nullable(),
+  "assignedProgram": zod.union([zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "goal": zod.string(),
+  "description": zod.string().nullable(),
+  "recommendedDaysPerWeek": zod.number().int(),
+  "expectedSessionMinutes": zod.number().int(),
+  "equipmentRequirements": zod.array(zod.string()),
+  "trainerReviewRequired": zod.boolean(),
+  "exercises": zod.array(zod.object({
+  "name": zod.string().min(submitPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneNameMin).max(submitPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneNameMax),
+  "sets": zod.number().int().min(1).max(submitPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneSetsMax).default(submitPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneSetsDefault),
+  "repetitions": zod.number().int().min(1).max(submitPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneRepetitionsMax).nullable(),
+  "durationSeconds": zod.number().int().min(1).max(submitPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneDurationSecondsMax).nullable(),
+  "restSeconds": zod.number().int().min(submitPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneRestSecondsMin).max(submitPublicMemberOnboardingResponseAssignedProgramOneExercisesItemOneRestSecondsMax).nullable()
+}).and(zod.object({
+  "id": zod.string().uuid(),
+  "position": zod.number().int().min(submitPublicMemberOnboardingResponseAssignedProgramOneExercisesItemTwoPositionMin)
+}))),
+  "matchReasons": zod.array(zod.string())
+}),zod.null()])
+})
+
+
+/**
+ * @summary List submitted member profiles awaiting trainer review
+ */
+export const listMemberOnboardingReviewsResponseAvailableDaysPerWeekMax = 7;
+
+export const listMemberOnboardingReviewsResponseSessionDurationMinutesMin = 15;
+export const listMemberOnboardingReviewsResponseSessionDurationMinutesMax = 180;
+
+export const listMemberOnboardingReviewsResponseRecommendationOneExercisesItemOneNameMin = 2;
+export const listMemberOnboardingReviewsResponseRecommendationOneExercisesItemOneNameMax = 120;
+
+export const listMemberOnboardingReviewsResponseRecommendationOneExercisesItemOneSetsDefault = 1;
+export const listMemberOnboardingReviewsResponseRecommendationOneExercisesItemOneSetsMax = 50;
+
+export const listMemberOnboardingReviewsResponseRecommendationOneExercisesItemOneRepetitionsMax = 1000;
+
+export const listMemberOnboardingReviewsResponseRecommendationOneExercisesItemOneDurationSecondsMax = 86400;
+
+export const listMemberOnboardingReviewsResponseRecommendationOneExercisesItemOneRestSecondsMin = 0;
+export const listMemberOnboardingReviewsResponseRecommendationOneExercisesItemOneRestSecondsMax = 3600;
+
+export const listMemberOnboardingReviewsResponseRecommendationOneExercisesItemTwoPositionMin = 0;
+
+export const listMemberOnboardingReviewsResponseAlternativesItemExercisesItemOneNameMin = 2;
+export const listMemberOnboardingReviewsResponseAlternativesItemExercisesItemOneNameMax = 120;
+
+export const listMemberOnboardingReviewsResponseAlternativesItemExercisesItemOneSetsDefault = 1;
+export const listMemberOnboardingReviewsResponseAlternativesItemExercisesItemOneSetsMax = 50;
+
+export const listMemberOnboardingReviewsResponseAlternativesItemExercisesItemOneRepetitionsMax = 1000;
+
+export const listMemberOnboardingReviewsResponseAlternativesItemExercisesItemOneDurationSecondsMax = 86400;
+
+export const listMemberOnboardingReviewsResponseAlternativesItemExercisesItemOneRestSecondsMin = 0;
+export const listMemberOnboardingReviewsResponseAlternativesItemExercisesItemOneRestSecondsMax = 3600;
+
+export const listMemberOnboardingReviewsResponseAlternativesItemExercisesItemTwoPositionMin = 0;
+
+
+
+export const ListMemberOnboardingReviewsResponseItem = zod.object({
+  "memberId": zod.string().uuid(),
+  "memberName": zod.string(),
+  "memberNumber": zod.string(),
+  "primaryGoal": zod.enum(['build_strength', 'lose_weight', 'improve_fitness', 'gain_muscle', 'general_wellness']),
+  "experience": zod.enum(['beginner', 'intermediate', 'advanced']),
+  "availableDaysPerWeek": zod.number().int().min(1).max(listMemberOnboardingReviewsResponseAvailableDaysPerWeekMax),
+  "sessionDurationMinutes": zod.number().int().min(listMemberOnboardingReviewsResponseSessionDurationMinutesMin).max(listMemberOnboardingReviewsResponseSessionDurationMinutesMax),
+  "equipmentPreferences": zod.array(zod.string()),
+  "limitations": zod.string().nullable(),
+  "notes": zod.string().nullable(),
+  "recommendation": zod.union([zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "goal": zod.string(),
+  "description": zod.string().nullable(),
+  "recommendedDaysPerWeek": zod.number().int(),
+  "expectedSessionMinutes": zod.number().int(),
+  "equipmentRequirements": zod.array(zod.string()),
+  "trainerReviewRequired": zod.boolean(),
+  "exercises": zod.array(zod.object({
+  "name": zod.string().min(listMemberOnboardingReviewsResponseRecommendationOneExercisesItemOneNameMin).max(listMemberOnboardingReviewsResponseRecommendationOneExercisesItemOneNameMax),
+  "sets": zod.number().int().min(1).max(listMemberOnboardingReviewsResponseRecommendationOneExercisesItemOneSetsMax).default(listMemberOnboardingReviewsResponseRecommendationOneExercisesItemOneSetsDefault),
+  "repetitions": zod.number().int().min(1).max(listMemberOnboardingReviewsResponseRecommendationOneExercisesItemOneRepetitionsMax).nullable(),
+  "durationSeconds": zod.number().int().min(1).max(listMemberOnboardingReviewsResponseRecommendationOneExercisesItemOneDurationSecondsMax).nullable(),
+  "restSeconds": zod.number().int().min(listMemberOnboardingReviewsResponseRecommendationOneExercisesItemOneRestSecondsMin).max(listMemberOnboardingReviewsResponseRecommendationOneExercisesItemOneRestSecondsMax).nullable()
+}).and(zod.object({
+  "id": zod.string().uuid(),
+  "position": zod.number().int().min(listMemberOnboardingReviewsResponseRecommendationOneExercisesItemTwoPositionMin)
+}))),
+  "matchReasons": zod.array(zod.string())
+}),zod.null()]),
+  "alternatives": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "goal": zod.string(),
+  "description": zod.string().nullable(),
+  "recommendedDaysPerWeek": zod.number().int(),
+  "expectedSessionMinutes": zod.number().int(),
+  "equipmentRequirements": zod.array(zod.string()),
+  "trainerReviewRequired": zod.boolean(),
+  "exercises": zod.array(zod.object({
+  "name": zod.string().min(listMemberOnboardingReviewsResponseAlternativesItemExercisesItemOneNameMin).max(listMemberOnboardingReviewsResponseAlternativesItemExercisesItemOneNameMax),
+  "sets": zod.number().int().min(1).max(listMemberOnboardingReviewsResponseAlternativesItemExercisesItemOneSetsMax).default(listMemberOnboardingReviewsResponseAlternativesItemExercisesItemOneSetsDefault),
+  "repetitions": zod.number().int().min(1).max(listMemberOnboardingReviewsResponseAlternativesItemExercisesItemOneRepetitionsMax).nullable(),
+  "durationSeconds": zod.number().int().min(1).max(listMemberOnboardingReviewsResponseAlternativesItemExercisesItemOneDurationSecondsMax).nullable(),
+  "restSeconds": zod.number().int().min(listMemberOnboardingReviewsResponseAlternativesItemExercisesItemOneRestSecondsMin).max(listMemberOnboardingReviewsResponseAlternativesItemExercisesItemOneRestSecondsMax).nullable()
+}).and(zod.object({
+  "id": zod.string().uuid(),
+  "position": zod.number().int().min(listMemberOnboardingReviewsResponseAlternativesItemExercisesItemTwoPositionMin)
+}))),
+  "matchReasons": zod.array(zod.string())
+})),
+  "submittedAt": zod.coerce.date()
+})
+export const ListMemberOnboardingReviewsResponse = zod.array(ListMemberOnboardingReviewsResponseItem)
+
+
+/**
+ * @summary Approve or change and assign a member program after trainer review
+ */
+export const AssignReviewedOnboardingProgramParams = zod.object({
+  "memberId": zod.coerce.string().uuid()
+})
+
+export const assignReviewedOnboardingProgramBodyNotesMax = 1000;
+
+
+
+export const AssignReviewedOnboardingProgramBody = zod.object({
+  "programId": zod.string().uuid(),
+  "startsOn": zod.coerce.date(),
+  "notes": zod.string().max(assignReviewedOnboardingProgramBodyNotesMax).nullish()
+})
+
+export const AssignReviewedOnboardingProgramResponse = zod.object({
+  "id": zod.string().uuid(),
+  "programId": zod.string().uuid(),
+  "programName": zod.string(),
+  "goal": zod.string(),
+  "memberId": zod.string().uuid(),
+  "memberNumber": zod.string(),
+  "memberName": zod.string(),
+  "startsOn": zod.coerce.date(),
+  "status": zod.enum(['assigned', 'in_progress', 'completed', 'cancelled']),
+  "notes": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
  * @summary List workout templates
  */
 export const listWorkoutProgramsQueryIncludeArchivedDefault = false;
@@ -1026,6 +1522,11 @@ export const listWorkoutProgramsQueryIncludeArchivedDefault = false;
 export const ListWorkoutProgramsQueryParams = zod.object({
   "includeArchived": zod.coerce.boolean().default(listWorkoutProgramsQueryIncludeArchivedDefault)
 })
+
+export const listWorkoutProgramsResponseRecommendedDaysPerWeekMax = 7;
+
+export const listWorkoutProgramsResponseExpectedSessionMinutesMin = 15;
+export const listWorkoutProgramsResponseExpectedSessionMinutesMax = 240;
 
 export const listWorkoutProgramsResponseExercisesItemOneNameMin = 2;
 export const listWorkoutProgramsResponseExercisesItemOneNameMax = 120;
@@ -1051,6 +1552,13 @@ export const ListWorkoutProgramsResponseItem = zod.object({
   "name": zod.string(),
   "goal": zod.string(),
   "description": zod.string().nullable(),
+  "goalsSupported": zod.array(zod.string()),
+  "minimumExperience": zod.enum(['beginner', 'intermediate', 'advanced']),
+  "maximumExperience": zod.enum(['beginner', 'intermediate', 'advanced']),
+  "recommendedDaysPerWeek": zod.number().int().min(1).max(listWorkoutProgramsResponseRecommendedDaysPerWeekMax),
+  "expectedSessionMinutes": zod.number().int().min(listWorkoutProgramsResponseExpectedSessionMinutesMin).max(listWorkoutProgramsResponseExpectedSessionMinutesMax),
+  "equipmentRequirements": zod.array(zod.string()),
+  "trainerReviewRequired": zod.boolean(),
   "status": zod.enum(['active', 'archived']),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date(),
@@ -1087,6 +1595,18 @@ export const createWorkoutProgramBodyGoalMax = 200;
 
 export const createWorkoutProgramBodyDescriptionMax = 4000;
 
+export const createWorkoutProgramBodyGoalsSupportedDefault = [];
+export const createWorkoutProgramBodyMinimumExperienceDefault = `beginner`;
+export const createWorkoutProgramBodyMaximumExperienceDefault = `advanced`;
+export const createWorkoutProgramBodyRecommendedDaysPerWeekDefault = 3;
+export const createWorkoutProgramBodyRecommendedDaysPerWeekMax = 7;
+
+export const createWorkoutProgramBodyExpectedSessionMinutesDefault = 45;
+export const createWorkoutProgramBodyExpectedSessionMinutesMin = 15;
+export const createWorkoutProgramBodyExpectedSessionMinutesMax = 240;
+
+export const createWorkoutProgramBodyEquipmentRequirementsDefault = [];
+export const createWorkoutProgramBodyTrainerReviewRequiredDefault = false;
 export const createWorkoutProgramBodyExercisesItemNameMin = 2;
 export const createWorkoutProgramBodyExercisesItemNameMax = 120;
 
@@ -1108,6 +1628,13 @@ export const CreateWorkoutProgramBody = zod.object({
   "name": zod.string().min(createWorkoutProgramBodyNameMin).max(createWorkoutProgramBodyNameMax),
   "goal": zod.string().min(createWorkoutProgramBodyGoalMin).max(createWorkoutProgramBodyGoalMax),
   "description": zod.string().max(createWorkoutProgramBodyDescriptionMax).nullish(),
+  "goalsSupported": zod.array(zod.enum(['build_strength', 'lose_weight', 'improve_fitness', 'gain_muscle', 'general_wellness'])).default(createWorkoutProgramBodyGoalsSupportedDefault),
+  "minimumExperience": zod.enum(['beginner', 'intermediate', 'advanced']).default(createWorkoutProgramBodyMinimumExperienceDefault),
+  "maximumExperience": zod.enum(['beginner', 'intermediate', 'advanced']).default(createWorkoutProgramBodyMaximumExperienceDefault),
+  "recommendedDaysPerWeek": zod.number().int().min(1).max(createWorkoutProgramBodyRecommendedDaysPerWeekMax).default(createWorkoutProgramBodyRecommendedDaysPerWeekDefault),
+  "expectedSessionMinutes": zod.number().int().min(createWorkoutProgramBodyExpectedSessionMinutesMin).max(createWorkoutProgramBodyExpectedSessionMinutesMax).default(createWorkoutProgramBodyExpectedSessionMinutesDefault),
+  "equipmentRequirements": zod.array(zod.enum(['bodyweight', 'dumbbells', 'resistance_bands', 'barbell', 'machines', 'cardio_machines'])).default(createWorkoutProgramBodyEquipmentRequirementsDefault),
+  "trainerReviewRequired": zod.boolean().default(createWorkoutProgramBodyTrainerReviewRequiredDefault),
   "exercises": zod.array(zod.object({
   "name": zod.string().min(createWorkoutProgramBodyExercisesItemNameMin).max(createWorkoutProgramBodyExercisesItemNameMax),
   "sets": zod.number().int().min(1).max(createWorkoutProgramBodyExercisesItemSetsMax).default(createWorkoutProgramBodyExercisesItemSetsDefault),
@@ -1116,6 +1643,11 @@ export const CreateWorkoutProgramBody = zod.object({
   "restSeconds": zod.number().int().min(createWorkoutProgramBodyExercisesItemRestSecondsMin).max(createWorkoutProgramBodyExercisesItemRestSecondsMax).nullish()
 })).min(1).max(createWorkoutProgramBodyExercisesMax)
 })
+
+export const createWorkoutProgramResponseRecommendedDaysPerWeekMax = 7;
+
+export const createWorkoutProgramResponseExpectedSessionMinutesMin = 15;
+export const createWorkoutProgramResponseExpectedSessionMinutesMax = 240;
 
 export const createWorkoutProgramResponseExercisesItemOneNameMin = 2;
 export const createWorkoutProgramResponseExercisesItemOneNameMax = 120;
@@ -1141,6 +1673,13 @@ export const CreateWorkoutProgramResponse = zod.object({
   "name": zod.string(),
   "goal": zod.string(),
   "description": zod.string().nullable(),
+  "goalsSupported": zod.array(zod.string()),
+  "minimumExperience": zod.enum(['beginner', 'intermediate', 'advanced']),
+  "maximumExperience": zod.enum(['beginner', 'intermediate', 'advanced']),
+  "recommendedDaysPerWeek": zod.number().int().min(1).max(createWorkoutProgramResponseRecommendedDaysPerWeekMax),
+  "expectedSessionMinutes": zod.number().int().min(createWorkoutProgramResponseExpectedSessionMinutesMin).max(createWorkoutProgramResponseExpectedSessionMinutesMax),
+  "equipmentRequirements": zod.array(zod.string()),
+  "trainerReviewRequired": zod.boolean(),
   "status": zod.enum(['active', 'archived']),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date(),
@@ -1180,6 +1719,11 @@ export const updateWorkoutProgramBodyGoalMax = 200;
 
 export const updateWorkoutProgramBodyDescriptionMax = 4000;
 
+export const updateWorkoutProgramBodyRecommendedDaysPerWeekMax = 7;
+
+export const updateWorkoutProgramBodyExpectedSessionMinutesMin = 15;
+export const updateWorkoutProgramBodyExpectedSessionMinutesMax = 240;
+
 export const updateWorkoutProgramBodyExercisesItemNameMin = 2;
 export const updateWorkoutProgramBodyExercisesItemNameMax = 120;
 
@@ -1201,6 +1745,13 @@ export const UpdateWorkoutProgramBody = zod.object({
   "name": zod.string().min(updateWorkoutProgramBodyNameMin).max(updateWorkoutProgramBodyNameMax).optional(),
   "goal": zod.string().min(updateWorkoutProgramBodyGoalMin).max(updateWorkoutProgramBodyGoalMax).optional(),
   "description": zod.string().max(updateWorkoutProgramBodyDescriptionMax).nullish(),
+  "goalsSupported": zod.array(zod.enum(['build_strength', 'lose_weight', 'improve_fitness', 'gain_muscle', 'general_wellness'])).optional(),
+  "minimumExperience": zod.enum(['beginner', 'intermediate', 'advanced']).optional(),
+  "maximumExperience": zod.enum(['beginner', 'intermediate', 'advanced']).optional(),
+  "recommendedDaysPerWeek": zod.number().int().min(1).max(updateWorkoutProgramBodyRecommendedDaysPerWeekMax).optional(),
+  "expectedSessionMinutes": zod.number().int().min(updateWorkoutProgramBodyExpectedSessionMinutesMin).max(updateWorkoutProgramBodyExpectedSessionMinutesMax).optional(),
+  "equipmentRequirements": zod.array(zod.enum(['bodyweight', 'dumbbells', 'resistance_bands', 'barbell', 'machines', 'cardio_machines'])).optional(),
+  "trainerReviewRequired": zod.boolean().optional(),
   "status": zod.enum(['active', 'archived']).optional(),
   "exercises": zod.array(zod.object({
   "name": zod.string().min(updateWorkoutProgramBodyExercisesItemNameMin).max(updateWorkoutProgramBodyExercisesItemNameMax),
@@ -1210,6 +1761,11 @@ export const UpdateWorkoutProgramBody = zod.object({
   "restSeconds": zod.number().int().min(updateWorkoutProgramBodyExercisesItemRestSecondsMin).max(updateWorkoutProgramBodyExercisesItemRestSecondsMax).nullish()
 })).min(1).max(updateWorkoutProgramBodyExercisesMax).optional()
 })
+
+export const updateWorkoutProgramResponseRecommendedDaysPerWeekMax = 7;
+
+export const updateWorkoutProgramResponseExpectedSessionMinutesMin = 15;
+export const updateWorkoutProgramResponseExpectedSessionMinutesMax = 240;
 
 export const updateWorkoutProgramResponseExercisesItemOneNameMin = 2;
 export const updateWorkoutProgramResponseExercisesItemOneNameMax = 120;
@@ -1235,6 +1791,13 @@ export const UpdateWorkoutProgramResponse = zod.object({
   "name": zod.string(),
   "goal": zod.string(),
   "description": zod.string().nullable(),
+  "goalsSupported": zod.array(zod.string()),
+  "minimumExperience": zod.enum(['beginner', 'intermediate', 'advanced']),
+  "maximumExperience": zod.enum(['beginner', 'intermediate', 'advanced']),
+  "recommendedDaysPerWeek": zod.number().int().min(1).max(updateWorkoutProgramResponseRecommendedDaysPerWeekMax),
+  "expectedSessionMinutes": zod.number().int().min(updateWorkoutProgramResponseExpectedSessionMinutesMin).max(updateWorkoutProgramResponseExpectedSessionMinutesMax),
+  "equipmentRequirements": zod.array(zod.string()),
+  "trainerReviewRequired": zod.boolean(),
   "status": zod.enum(['active', 'archived']),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date(),

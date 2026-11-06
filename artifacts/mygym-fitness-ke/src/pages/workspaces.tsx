@@ -50,9 +50,35 @@ type Workout = {
   name: string;
   goal: string;
   description: string | null;
+  goalsSupported: string[];
+  minimumExperience: string;
+  maximumExperience: string;
+  recommendedDaysPerWeek: number;
+  expectedSessionMinutes: number;
+  equipmentRequirements: string[];
+  trainerReviewRequired: boolean;
   status: string;
   exercises: Exercise[];
   resources: WorkoutResource[];
+};
+type OnboardingProgram = Pick<Workout,
+  'id' | 'name' | 'goal' | 'description' | 'recommendedDaysPerWeek' |
+  'expectedSessionMinutes' | 'equipmentRequirements' | 'trainerReviewRequired' | 'exercises'
+> & { matchReasons: string[] };
+type OnboardingReview = {
+  memberId: string;
+  memberName: string;
+  memberNumber: string;
+  primaryGoal: string;
+  experience: string;
+  availableDaysPerWeek: number;
+  sessionDurationMinutes: number;
+  equipmentPreferences: string[];
+  limitations: string | null;
+  notes: string | null;
+  recommendation: OnboardingProgram | null;
+  alternatives: OnboardingProgram[];
+  submittedAt: string;
 };
 type Assignment = {
   id: string;
@@ -120,6 +146,16 @@ type Summary = {
   upcomingEvents: EventItem[];
 };
 type ExerciseForm = { name: string; sets: string; repetitions: string; durationSeconds: string; restSeconds: string };
+const programGoals = [
+  ['build_strength', 'Build strength'], ['lose_weight', 'Lose weight'],
+  ['improve_fitness', 'Improve fitness'], ['gain_muscle', 'Gain muscle'],
+  ['general_wellness', 'General wellbeing'],
+] as const;
+const programEquipment = [
+  ['bodyweight', 'Bodyweight'], ['dumbbells', 'Dumbbells'],
+  ['resistance_bands', 'Resistance bands'], ['barbell', 'Barbell'],
+  ['machines', 'Weight machines'], ['cardio_machines', 'Cardio machines'],
+] as const;
 
 const request = <T,>(path: string, init: RequestInit = {}) =>
   customFetch<T>(path, { ...init, responseType: 'json' });
@@ -337,6 +373,104 @@ const blankExercise = (): ExerciseForm => ({
   name: '', sets: '3', repetitions: '10', durationSeconds: '', restSeconds: '60',
 });
 
+function OnboardingReviewQueue({ programs }: { programs: Workout[] }) {
+  const client = useQueryClient();
+  const [selectedPrograms, setSelectedPrograms] = useState<Record<string, string>>({});
+  const [startDates, setStartDates] = useState<Record<string, string>>({});
+  const [trainerNotes, setTrainerNotes] = useState<Record<string, string>>({});
+  const [safetyConfirmed, setSafetyConfirmed] = useState<Record<string, boolean>>({});
+  const [formError, setFormError] = useState('');
+  const [message, setMessage] = useState('');
+  const reviews = useQuery({
+    queryKey: ['member-onboarding-reviews'],
+    queryFn: () => request<OnboardingReview[]>('/api/onboarding/reviews'),
+  });
+  useEffect(() => {
+    if (!reviews.data) return;
+    setSelectedPrograms((current) => {
+      const next = { ...current };
+      for (const item of reviews.data ?? []) {
+        if (!(item.memberId in next) && item.recommendation) next[item.memberId] = item.recommendation.id;
+      }
+      return next;
+    });
+    setStartDates((current) => {
+      const next = { ...current };
+      for (const item of reviews.data ?? []) if (!(item.memberId in next)) next[item.memberId] = localToday();
+      return next;
+    });
+  }, [reviews.data]);
+  const assign = useMutation({
+    mutationFn: ({ item, programId }: { item: OnboardingReview; programId: string }) =>
+      request(`/api/onboarding/reviews/${item.memberId}/assign`, jsonBody('POST', {
+        programId,
+        startsOn: startDates[item.memberId] || localToday(),
+        notes: trainerNotes[item.memberId]?.trim() || null,
+      })),
+    onSuccess: async () => {
+      setMessage('Trainer review saved and the final program assigned.');
+      setFormError('');
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ['member-onboarding-reviews'] }),
+        client.invalidateQueries({ queryKey: ['workout-assignments'] }),
+        client.invalidateQueries({ queryKey: ['workspace-summary'] }),
+      ]);
+    },
+    onError: (error) => setFormError(serverError(error, 'The program could not be assigned. Please review the member and try again.')),
+  });
+  function submit(item: OnboardingReview) {
+    const programId = selectedPrograms[item.memberId];
+    const program = programs.find((entry) => entry.id === programId);
+    if (!program) {
+      setFormError('Choose an active saved program before assigning.');
+      return;
+    }
+    if ((item.limitations || program.trainerReviewRequired) && !safetyConfirmed[item.memberId]) {
+      setFormError('Confirm that you reviewed the member-reported limitation or trainer-review requirement first.');
+      return;
+    }
+    setFormError('');
+    setMessage('');
+    assign.mutate({ item, programId });
+  }
+
+  return <section className="ws-panel ws-onboarding-queue" aria-label="New member workout review queue">
+    <div className="ws-panel-head"><div><span className="ws-eyebrow">TRAINER REVIEW QUEUE</span><h2>New member recommendations</h2><p>Review every suggestion before assigning a workout.</p></div><span className="ws-queue-count">{reviews.data?.length ?? '—'} awaiting</span></div>
+    {reviews.isLoading ? <LoadingPanel /> : reviews.isError ? <div className="ws-error"><CircleAlert size={18} />{serverError(reviews.error, 'The trainer review queue could not be loaded.')}</div> :
+      !reviews.data?.length ? <p className="ws-empty">No new member recommendations are waiting for review.</p> :
+        <div className="ws-review-list">{reviews.data.map((item) => {
+          const chosen = programs.find((program) => program.id === selectedPrograms[item.memberId]);
+          const needsConfirmation = Boolean(item.limitations || chosen?.trainerReviewRequired);
+          return <article className="ws-review-card" key={item.memberId}>
+            <div className="ws-review-head"><div><span className="ws-eyebrow">NEW MEMBER · {item.memberNumber}</span><h3>{item.memberName}</h3></div><time>{fmtDateTime(item.submittedAt)}</time></div>
+            <div className="ws-review-facts">
+              <span><b>Goal</b>{item.primaryGoal.replaceAll('_', ' ')}</span>
+              <span><b>Experience</b>{item.experience}</span>
+              <span><b>Availability</b>{item.availableDaysPerWeek} days · up to {item.sessionDurationMinutes} min/session</span>
+              <span><b>Equipment</b>{item.equipmentPreferences.length ? item.equipmentPreferences.map((value) => value.replaceAll('_', ' ')).join(', ') : 'Not specified'}</span>
+            </div>
+            {item.recommendation ? <div className="ws-review-suggestion"><b>Saved program suggested: {item.recommendation.name}</b><p>{item.recommendation.goal} · {item.recommendation.recommendedDaysPerWeek} days/week · {item.recommendation.expectedSessionMinutes} minutes/session</p><small>Exercises: {item.recommendation.exercises.map((exercise) => exercise.name).join(', ') || 'Ask the member and gym team to review the template details.'}</small>{item.alternatives.length > 0 && <small>Other matching templates: {item.alternatives.map((program) => program.name).join(', ')}</small>}</div> :
+              <div className="ws-review-no-match"><CircleAlert size={16} /> No saved program matches every answer. Review the member's details and choose a suitable active program or create one first.</div>}
+            {item.limitations && <div className="ws-review-limitation"><b>Member-reported limitation</b><p>{item.limitations}</p><small>Discuss this with the member in person; the system deliberately did not generate a workout suggestion.</small></div>}
+            {item.notes && <div className="ws-review-member-note"><b>Member note</b><p>{item.notes}</p></div>}
+            <div className="ws-review-assign">
+              <label className="ws-field">Final program
+                <select value={selectedPrograms[item.memberId] ?? ''} onChange={(event) => setSelectedPrograms((current) => ({ ...current, [item.memberId]: event.target.value }))}>
+                  <option value="">Choose an active saved program</option>{programs.map((program) => <option key={program.id} value={program.id}>{program.name} · {program.recommendedDaysPerWeek} days/week</option>)}
+                </select>
+              </label>
+              <label className="ws-field">Starts on<input type="date" value={startDates[item.memberId] ?? localToday()} onChange={(event) => setStartDates((current) => ({ ...current, [item.memberId]: event.target.value }))} /></label>
+              <label className="ws-field">Trainer note <span className="ws-muted">(optional)</span><input value={trainerNotes[item.memberId] ?? ''} maxLength={1000} onChange={(event) => setTrainerNotes((current) => ({ ...current, [item.memberId]: event.target.value }))} placeholder="Coaching context" /></label>
+            </div>
+            {needsConfirmation && <label className="ws-review-confirm"><input type="checkbox" checked={Boolean(safetyConfirmed[item.memberId])} onChange={(event) => setSafetyConfirmed((current) => ({ ...current, [item.memberId]: event.target.checked }))} /><span>I reviewed the member's reported limitation or the program's trainer-review flag before assigning.</span></label>}
+            <button className="ws-button" disabled={assign.isPending || !programs.length || (needsConfirmation && !safetyConfirmed[item.memberId])} onClick={() => submit(item)}>{assign.isPending ? <LoaderCircle size={16} className="spin" /> : <Check size={16} />} Approve &amp; assign final program</button>
+          </article>;
+        })}</div>}
+    {formError && <p className="ws-error" role="alert"><CircleAlert size={16} />{formError}</p>}
+    {message && <p className="ws-success" role="status"><Check size={16} />{message}</p>}
+  </section>;
+}
+
 export function WorkoutsPage() {
   const client = useQueryClient();
   const [includeArchived, setIncludeArchived] = useState(false);
@@ -344,6 +478,13 @@ export function WorkoutsPage() {
   const [name, setName] = useState('');
   const [goal, setGoal] = useState('');
   const [description, setDescription] = useState('');
+  const [goalsSupported, setGoalsSupported] = useState<string[]>([]);
+  const [minimumExperience, setMinimumExperience] = useState('beginner');
+  const [maximumExperience, setMaximumExperience] = useState('advanced');
+  const [recommendedDaysPerWeek, setRecommendedDaysPerWeek] = useState('3');
+  const [expectedSessionMinutes, setExpectedSessionMinutes] = useState('45');
+  const [equipmentRequirements, setEquipmentRequirements] = useState<string[]>([]);
+  const [trainerReviewRequired, setTrainerReviewRequired] = useState(false);
   const [exerciseForms, setExerciseForms] = useState<ExerciseForm[]>([blankExercise()]);
   const [selectedProgram, setSelectedProgram] = useState('');
   const [memberSearch, setMemberSearch] = useState('');
@@ -439,6 +580,13 @@ export function WorkoutsPage() {
     setName('');
     setGoal('');
     setDescription('');
+    setGoalsSupported([]);
+    setMinimumExperience('beginner');
+    setMaximumExperience('advanced');
+    setRecommendedDaysPerWeek('3');
+    setExpectedSessionMinutes('45');
+    setEquipmentRequirements([]);
+    setTrainerReviewRequired(false);
     setExerciseForms([blankExercise()]);
   }
   function editProgram(program: Workout) {
@@ -446,6 +594,13 @@ export function WorkoutsPage() {
     setName(program.name);
     setGoal(program.goal);
     setDescription(program.description ?? '');
+    setGoalsSupported(program.goalsSupported ?? []);
+    setMinimumExperience(program.minimumExperience ?? 'beginner');
+    setMaximumExperience(program.maximumExperience ?? 'advanced');
+    setRecommendedDaysPerWeek(String(program.recommendedDaysPerWeek ?? 3));
+    setExpectedSessionMinutes(String(program.expectedSessionMinutes ?? 45));
+    setEquipmentRequirements(program.equipmentRequirements ?? []);
+    setTrainerReviewRequired(program.trainerReviewRequired ?? false);
     setExerciseForms(program.exercises.map((exercise) => ({
       name: exercise.name,
       sets: String(exercise.sets),
@@ -463,6 +618,14 @@ export function WorkoutsPage() {
       setFormError('Each exercise needs a name and either repetitions or a duration.');
       return;
     }
+    if (!goalsSupported.length) {
+      setFormError('Choose at least one goal so this saved program can be matched safely.');
+      return;
+    }
+    if (['beginner', 'intermediate', 'advanced'].indexOf(minimumExperience) > ['beginner', 'intermediate', 'advanced'].indexOf(maximumExperience)) {
+      setFormError('Minimum experience cannot be higher than maximum experience.');
+      return;
+    }
     const exercises = exerciseForms.map((exercise) => ({
       name: exercise.name.trim(),
       sets: Number(exercise.sets),
@@ -474,6 +637,13 @@ export function WorkoutsPage() {
       name: name.trim(),
       goal: goal.trim(),
       description: description.trim() || null,
+      goalsSupported,
+      minimumExperience,
+      maximumExperience,
+      recommendedDaysPerWeek: Number(recommendedDaysPerWeek),
+      expectedSessionMinutes: Number(expectedSessionMinutes),
+      equipmentRequirements,
+      trainerReviewRequired,
       exercises,
     });
   }
@@ -489,6 +659,7 @@ export function WorkoutsPage() {
 
   return <StaffFrame active="workouts"><div className="ws-page">
     <WorkspaceHeading eyebrow="TRAINING LIBRARY" title="Workout plans" description="Build reusable programs, attach private coaching resources and assign plans to members." />
+    <OnboardingReviewQueue programs={(programs.data ?? []).filter((item) => item.status === 'active')} />
     <section className="ws-panel">
       <div className="ws-panel-head"><div><span className="ws-eyebrow">{editing ? 'EDIT TEMPLATE' : 'WORKOUT DESIGN'}</span><h2>{editing ? `Update ${editing.name}` : 'Create a workout template'}</h2></div>{editing && <button className="ws-quiet-button" onClick={clearEditor}><X size={15} /> Cancel edit</button>}</div>
       <form className="ws-form" onSubmit={submitProgram}>
@@ -497,6 +668,18 @@ export function WorkoutsPage() {
           <label className="ws-field">Training goal<input required minLength={2} maxLength={200} value={goal} onChange={(event) => setGoal(event.target.value)} placeholder="Build full-body strength" /></label>
           <label className="ws-field">Notes<input maxLength={4000} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Optional coaching notes" /></label>
         </div>
+        <section className="ws-match-metadata" aria-label="Program matching details">
+          <div><span className="ws-eyebrow">MEMBER MATCHING</span><h3>Who this saved program is for</h3><p>Only active programs with matching details can appear as member suggestions.</p></div>
+          <fieldset className="ws-meta-options"><legend>Goals supported</legend><div>{programGoals.map(([value, label]) => <label key={value}><input type="checkbox" checked={goalsSupported.includes(value)} onChange={() => setGoalsSupported((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current, value])} /><span>{label}</span></label>)}</div></fieldset>
+          <div className="ws-field-grid ws-three-columns">
+            <label className="ws-field">Minimum experience<select value={minimumExperience} onChange={(event) => setMinimumExperience(event.target.value)}><option value="beginner">Beginner</option><option value="intermediate">Intermediate</option><option value="advanced">Advanced</option></select></label>
+            <label className="ws-field">Maximum experience<select value={maximumExperience} onChange={(event) => setMaximumExperience(event.target.value)}><option value="beginner">Beginner</option><option value="intermediate">Intermediate</option><option value="advanced">Advanced</option></select></label>
+            <label className="ws-field">Training days each week<input type="number" min="1" max="7" value={recommendedDaysPerWeek} onChange={(event) => setRecommendedDaysPerWeek(event.target.value)} /></label>
+            <label className="ws-field">Expected session length (minutes)<input type="number" min="15" max="240" value={expectedSessionMinutes} onChange={(event) => setExpectedSessionMinutes(event.target.value)} /></label>
+          </div>
+          <fieldset className="ws-meta-options"><legend>Equipment required</legend><div>{programEquipment.map(([value, label]) => <label key={value}><input type="checkbox" checked={equipmentRequirements.includes(value)} onChange={() => setEquipmentRequirements((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current, value])} /><span>{label}</span></label>)}</div><small>Leave all unchecked if no specific equipment is needed.</small></fieldset>
+          <label className="ws-meta-review"><input type="checkbox" checked={trainerReviewRequired} onChange={(event) => setTrainerReviewRequired(event.target.checked)} /><span><b>Trainer review required before assignment</b><small>Use this for programs that need an in-person suitability check.</small></span></label>
+        </section>
         <div className="ws-exercise-editor">
           {exerciseForms.map((exercise, index) => <div className="ws-exercise-row" key={index}>
             <b className="ws-exercise-index">{String(index + 1).padStart(2, '0')}</b>
@@ -522,6 +705,7 @@ export function WorkoutsPage() {
             <div className="ws-program-list">{(programs.data ?? []).map((program) => <article className="ws-program-card" key={program.id}>
               <div className="ws-panel-head"><div><h3>{program.name}</h3><p>{program.goal}</p></div><span className={`ws-status ${program.status === 'archived' ? 'is-muted' : ''}`}>{program.status}</span></div>
               {program.description && <p className="ws-program-notes">{program.description}</p>}
+               <div className="ws-program-meta"><span>{program.recommendedDaysPerWeek} days/week</span><span>{program.expectedSessionMinutes} min/session</span><span>{program.minimumExperience}–{program.maximumExperience}</span>{program.trainerReviewRequired && <span>Trainer review required</span>}</div>
               <ol className="ws-exercise-list">{program.exercises.map((exercise) => <li key={exercise.id}><span>{exercise.name}</span><small>{exercise.sets} sets{exercise.repetitions ? ` · ${exercise.repetitions} reps` : ''}{exercise.durationSeconds ? ` · ${exercise.durationSeconds}s` : ''}{exercise.restSeconds != null ? ` · ${exercise.restSeconds}s rest` : ''}</small></li>)}</ol>
               {program.resources.length > 0 && <div className="ws-resource-list">{program.resources.map((resource) => <button className="ws-resource" key={resource.id} onClick={async () => {
                 try {

@@ -3,9 +3,9 @@ import { Link, Redirect, useLocation } from 'wouter';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import { QRCodeSVG } from 'qrcode.react';
 import {
-  ArrowLeft, ArrowRight, CalendarDays, Check, ChevronLeft, ChevronRight, CircleAlert,
+  ArrowLeft, ArrowRight, CalendarDays, Check, ChevronLeft, ChevronRight, CircleAlert, Copy,
   Clock3, CreditCard, Dumbbell, Gauge, LoaderCircle, Pencil, Plus, QrCode, RefreshCw,
-  Search, ShieldCheck, UserCog, UserRound, UsersRound, Wallet, X,
+  MessageCircle, Search, ShieldCheck, UserCog, UserRound, UsersRound, Wallet, X,
 } from 'lucide-react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import {
@@ -26,6 +26,17 @@ const date = (value?: string | null) => value ? new Intl.DateTimeFormat('en-KE',
 const time = (value?: string | null) => value ? new Intl.DateTimeFormat('en-KE', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Nairobi' }).format(new Date(value)) : '—';
 const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const todayInNairobi = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Nairobi', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+type WelcomeDraft = { memberId: string; link: string; message: string; whatsappUrl: string };
+function welcomeDraft(memberId: string, name: string, phone: string, token: string): WelcomeDraft {
+  const firstName = name.trim().split(/\s+/)[0] || 'there';
+  const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+  const link = `${window.location.origin}${base}/onboarding/${encodeURIComponent(token)}`;
+  const message = `Hi ${firstName}! 👋 Welcome to MyGym Fitness KE.\n\nWe'd love to help you get started. Complete your fitness profile using the secure link below and we'll recommend a workout that matches your goals and availability.\n\n${link}\n\nOur trainers will be around to help you get started and stay consistent. 💪`;
+  let digits = phone.replace(/\D/g, '');
+  if (digits.startsWith('0')) digits = `254${digits.slice(1)}`;
+  else if (!digits.startsWith('254')) digits = `254${digits}`;
+  return { memberId, link, message, whatsappUrl: `https://wa.me/${digits}?text=${encodeURIComponent(message)}` };
+}
 
 function Notice({ children, error = false }: { children: ReactNode; error?: boolean }) {
   return <div className={`op-notice ${error ? 'is-error' : ''}`} role={error ? 'alert' : 'status'} data-testid={error ? 'status-operation-error' : 'status-operation-note'}>{error ? <CircleAlert size={17} /> : <ShieldCheck size={17} />}{children}</div>;
@@ -90,6 +101,10 @@ function Members() {
   const [wizardStart, setWizardStart] = useState(todayInNairobi);
   const [wizardSaving, setWizardSaving] = useState(false);
   const [name, setName] = useState(''), [phone, setPhone] = useState(''), [email, setEmail] = useState(''), [formError, setFormError] = useState(''), [success, setSuccess] = useState('');
+  const [welcome, setWelcome] = useState<WelcomeDraft | null>(null);
+  const [welcomeBusy, setWelcomeBusy] = useState(false);
+  const [welcomeError, setWelcomeError] = useState('');
+  const [welcomeCopied, setWelcomeCopied] = useState('');
   const [assessmentOpen, setAssessmentOpen] = useState(false);
   const [measurements, setMeasurements] = useState({weightKg:'',heightCm:'',bodyFatPercent:'',musclePercent:'',visceralFatLevel:''});
   const resetForm = () => { setName(''); setPhone(''); setEmail(''); setFormError(''); setAssessmentOpen(false); setMeasurements({weightKg:'',heightCm:'',bodyFatPercent:'',musclePercent:'',visceralFatLevel:''}); };
@@ -98,6 +113,45 @@ function Members() {
   const parsedHeight = Number(measurements.heightCm);
   const previewBmi = measurements.weightKg && measurements.heightCm && parsedWeight > 0 && parsedHeight > 0
     ? (parsedWeight / ((parsedHeight / 100) ** 2)).toFixed(1) : '—';
+  async function prepareWelcome(memberId: string, memberName: string, memberPhone: string) {
+    setWelcomeBusy(true); setWelcomeError(''); setWelcomeCopied('');
+    try {
+      const issued = await customFetch<{ token: string }>(`/api/members/${encodeURIComponent(memberId)}/onboarding-link`, {
+        method: 'POST', responseType: 'json',
+      });
+      setWelcome(welcomeDraft(memberId, memberName, memberPhone, issued.token));
+      setSuccess('A fresh secure onboarding link is ready. Staff must send the message in WhatsApp.');
+    } catch (error) {
+      setWelcomeError(serverError(error, 'A new onboarding link could not be prepared.'));
+    } finally {
+      setWelcomeBusy(false);
+    }
+  }
+  async function copyWelcome(value: string, label: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      setWelcomeCopied(`${label} copied.`);
+    } catch {
+      setWelcomeCopied('Copy is unavailable in this browser. Select and copy the text manually.');
+    }
+  }
+  async function revokeWelcome(memberId: string) {
+    if (!window.confirm('Revoke this member’s active onboarding link? Anyone holding it will lose access.')) return;
+    setWelcomeError('');
+    try {
+      const result = await customFetch<{ revoked: boolean }>(`/api/members/${encodeURIComponent(memberId)}/onboarding-link/revoke`, {
+        method: 'POST', responseType: 'json',
+      });
+      if (result.revoked) {
+        if (welcome?.memberId === memberId) setWelcome(null);
+        setSuccess('The member’s active onboarding link has been revoked.');
+      } else {
+        setSuccess('There was no active onboarding link to revoke.');
+      }
+    } catch (error) {
+      setWelcomeError(serverError(error, 'The onboarding link could not be revoked.'));
+    }
+  }
 
   function openEdit(id: string) {
     setSelected(id); const row = query.data?.items.find((item) => item.id === id);
@@ -123,11 +177,13 @@ function Members() {
     try {
       const created=await create.mutateAsync({data:memberData});
       createdId=created.id;
+      if(created.onboardingToken) setWelcome(welcomeDraft(created.id, name, phone, created.onboardingToken));
+      else setWelcome(null);
       if(wizardPlanId){
         try {await wizardSubscription.mutateAsync({memberId:created.id,data:{planId:wizardPlanId,startsOn:wizardStart}});}
         catch(error){setSuccess(`Member registered, but the membership could not be assigned. Open Subscriptions to assign it manually. ${serverError(error,'')}`);setMode(null);resetForm();resetWizard();return;}
       }
-      setSuccess(wizardPlanId?'Member registered and membership assigned.':'Member registered.');
+      setSuccess(wizardPlanId?'Member registered and membership assigned. Prepare the WhatsApp welcome below.':'Member registered. Prepare the WhatsApp welcome below.');
       setMode(null);resetForm();resetWizard();
     } catch(error) {
       if(!createdId)setFormError(serverError(error,'Member could not be registered. Please check the details.'));
@@ -149,13 +205,26 @@ function Members() {
       initialAssessment: fields.length ? (assessment as {weightKg?:number;heightCm?:number;bodyFatPercent?:number;musclePercent?:number;visceralFatLevel?:number}) : null,
     } : { fullName: name.trim(), phone: phone.trim(), email: email.trim() || null };
 
-    const opts = { onSuccess: async () => { await client.invalidateQueries({ queryKey: getListMembersQueryKey() }); if (selected) await client.invalidateQueries({ queryKey: getGetMemberDetailQueryKey(selected) }); setMode(null); resetForm(); setSuccess(mode === 'edit' ? 'Member details updated.' : 'Member registered.'); }, onError: (error: unknown) => setFormError(serverError(error, 'Could not save this member. Check the details and try again.')) };
+    const opts = { onSuccess: async (created: { id: string; fullName: string; phone: string; onboardingToken?: string | null }) => { await client.invalidateQueries({ queryKey: getListMembersQueryKey() }); if (selected) await client.invalidateQueries({ queryKey: getGetMemberDetailQueryKey(selected) }); setMode(null); resetForm(); if(mode==='new'&&created.onboardingToken)setWelcome(welcomeDraft(created.id,created.fullName,created.phone,created.onboardingToken)); setSuccess(mode === 'edit' ? 'Member details updated.' : 'Member registered. Prepare the WhatsApp welcome below.'); }, onError: (error: unknown) => setFormError(serverError(error, 'Could not save this member. Check the details and try again.')) };
     if (mode === 'edit') update.mutate({ memberId: selected, data }, opts); else create.mutate({ data }, opts);
   }
   return <>
     <Heading eyebrow="MEMBER DIRECTORY" title="Members" detail="Find people quickly, keep their details accurate, and manage their access card."
       action={<button className="op-button op-primary" onClick={() => { resetForm(); resetWizard(); setSelected(''); setMode('new'); }} data-testid="button-register-member"><Plus size={16} /> Register member</button>} />
     {success && <Notice>{success}</Notice>}
+    {welcome && <section className="op-welcome-card" aria-label="Prepared WhatsApp welcome">
+      <div className="op-welcome-heading"><span><MessageCircle size={18}/></span><div><b>WhatsApp welcome is ready</b><small>Prepared only — the receptionist must press Send in WhatsApp. MyGym does not track delivery.</small></div></div>
+      <label>Secure onboarding link<input readOnly value={welcome.link} onFocus={(event)=>event.currentTarget.select()} /></label>
+      <div className="op-welcome-actions">
+        <button className="op-button op-primary" onClick={()=>window.open(welcome.whatsappUrl,'_blank','noopener,noreferrer')}><MessageCircle size={15}/> Open WhatsApp</button>
+        <button className="op-button op-light" onClick={()=>copyWelcome(welcome.message,'Welcome message')}><Copy size={15}/> Copy message</button>
+        <button className="op-button op-light" onClick={()=>copyWelcome(welcome.link,'Onboarding link')}><Copy size={15}/> Copy link</button>
+        <button className="op-button op-light" onClick={()=>revokeWelcome(welcome.memberId)}><X size={15}/> Revoke link</button>
+      </div>
+      {welcomeCopied&&<small className="op-welcome-feedback" role="status">{welcomeCopied}</small>}
+      {welcomeError&&<small className="op-error-inline" role="alert">{welcomeError}</small>}
+      <details><summary>Preview message</summary><p>{welcome.message}</p></details>
+    </section>}
     <section className="op-panel"><div className="op-toolbar"><label className="op-search"><Search size={17} /><input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search name, number or phone" data-testid="input-member-search" /></label><span className="op-count" data-testid="text-member-total">{query.data?.total ?? '—'} members</span></div>
     {query.isLoading ? <LoadingRows /> : query.error ? <Notice error>Member records could not be loaded. <button onClick={() => query.refetch()} data-testid="button-retry-members">Try again</button></Notice> : !query.data?.items.length ? <div className="op-empty"><UsersRound size={25} /><b>{search ? 'No matching members' : 'Your member list starts here'}</b><p>{search ? 'Try another name, member number or phone.' : 'Register a member to create their profile and QR access card.'}</p></div> :
       <div className="op-table-wrap"><table className="op-table"><thead><tr><th>Member</th><th>Phone</th><th>Registered</th><th>Status</th><th /></tr></thead><tbody>{query.data.items.map((m) => <tr key={m.id} data-testid={`row-member-${m.id}`}><td><button className="op-person" onClick={() => { setSelected(m.id); setMode('profile'); }} data-testid={`button-profile-${m.id}`}><span className="op-initials">{m.initials}</span><span><b>{m.fullName}</b><small>{m.memberNumber}</small></span></button></td><td>{m.phone}</td><td>{date(m.registeredAt)}</td><td><Status value={m.status} /></td><td className="op-row-actions"><button className="op-icon-button" aria-label={`Edit ${m.fullName}`} onClick={() => openEdit(m.id)} data-testid={`button-edit-member-${m.id}`}><Pencil size={15} /></button><button className="op-text-button" onClick={() => { setSelected(m.id); setMode('profile'); }} data-testid={`button-view-member-${m.id}`}>View <ArrowRight size={14} /></button></td></tr>)}</tbody></table></div>}
@@ -185,7 +254,7 @@ function Members() {
         </form>
       </section>
     </div>}
-    {mode === 'profile' && <div className="op-overlay"><section className="op-dialog op-profile-dialog"><button className="op-close" onClick={() => setMode(null)} aria-label="Close profile" data-testid="button-close-member-profile"><X size={18} /></button>{profile.isLoading ? <LoadingRows /> : profile.error || !profile.data ? <Notice error>Member profile unavailable. Close and try again.</Notice> : <><div className="op-modal-kicker">MEMBER PROFILE</div><h2>{profile.data.fullName}</h2><p>{profile.data.memberNumber} · Registered {date(profile.data.registeredAt)}</p><div className="op-profile-grid"><div className="op-profile-details"><div><small>Phone</small><b>{profile.data.phone}</b></div><div><small>Email</small><b>{profile.data.email || 'Not provided'}</b></div><div><small>Membership status</small><Status value={profile.data.status} /></div>{profile.data.latestAssessment && <div className="op-latest-assessment"><small>Initial/latest fitness assessment</small><b>{profile.data.latestAssessment.weightKg ?? '—'} kg · BMI {profile.data.latestAssessment.bmi ?? '—'}</b><small>Height: {profile.data.latestAssessment.heightCm ?? '—'} cm · Body fat: {profile.data.latestAssessment.bodyFatPercent ?? '—'}% · Muscle: {profile.data.latestAssessment.musclePercent ?? '—'}% · Visceral fat: {profile.data.latestAssessment.visceralFatLevel ?? '—'}</small></div>}<button className="op-button op-light" onClick={() => openEdit(profile.data!.id)} data-testid="button-edit-profile">Edit member</button></div><div className="op-qr-card"><QRCodeSVG value={profile.data.qrToken} size={148} level="M" data-testid="qr-member-token" /><b>Member access card</b><small>Keep this code private.</small><button className="op-text-button" onClick={() => { if (window.confirm('Rotate this QR card? The current code will stop working.')) rotate.mutate({ memberId: profile.data!.id }, { onSuccess: async () => { await client.invalidateQueries({ queryKey: getGetMemberDetailQueryKey(profile.data!.id) }); setSuccess('QR access card rotated.'); }, onError: (error: unknown) => setFormError(serverError(error, 'QR card could not be rotated.')) }); }} disabled={rotate.isPending} data-testid="button-rotate-qr"><RefreshCw size={14} /> {rotate.isPending ? 'Rotating…' : 'Rotate QR card'}</button>{formError && <span className="op-error-inline">{formError}</span>}</div></div><MemberFitnessPanel memberId={selected}/></>}</section></div>}
+    {mode === 'profile' && <div className="op-overlay"><section className="op-dialog op-profile-dialog"><button className="op-close" onClick={() => setMode(null)} aria-label="Close profile" data-testid="button-close-member-profile"><X size={18} /></button>{profile.isLoading ? <LoadingRows /> : profile.error || !profile.data ? <Notice error>Member profile unavailable. Close and try again.</Notice> : <><div className="op-modal-kicker">MEMBER PROFILE</div><h2>{profile.data.fullName}</h2><p>{profile.data.memberNumber} · Registered {date(profile.data.registeredAt)}</p><div className="op-profile-grid"><div className="op-profile-details"><div><small>Phone</small><b>{profile.data.phone}</b></div><div><small>Email</small><b>{profile.data.email || 'Not provided'}</b></div><div><small>Membership status</small><Status value={profile.data.status} /></div>{profile.data.latestAssessment && <div className="op-latest-assessment"><small>Initial/latest fitness assessment</small><b>{profile.data.latestAssessment.weightKg ?? '—'} kg · BMI {profile.data.latestAssessment.bmi ?? '—'}</b><small>Height: {profile.data.latestAssessment.heightCm ?? '—'} cm · Body fat: {profile.data.latestAssessment.bodyFatPercent ?? '—'}% · Muscle: {profile.data.latestAssessment.musclePercent ?? '—'}% · Visceral fat: {profile.data.latestAssessment.visceralFatLevel ?? '—'}</small></div>}<button className="op-button op-primary" onClick={()=>prepareWelcome(profile.data!.id,profile.data!.fullName,profile.data!.phone)} disabled={welcomeBusy||profile.data.status!=='active'}><MessageCircle size={15}/>{welcomeBusy?'Preparing link…':'Send Welcome via WhatsApp'}</button><button className="op-button op-light" onClick={()=>revokeWelcome(profile.data!.id)}><X size={15}/>Revoke active onboarding link</button>{welcomeError&&<span className="op-error-inline">{welcomeError}</span>}<button className="op-button op-light" onClick={() => openEdit(profile.data!.id)} data-testid="button-edit-profile">Edit member</button></div><div className="op-qr-card"><QRCodeSVG value={profile.data.qrToken} size={148} level="M" data-testid="qr-member-token" /><b>Member access card</b><small>Keep this code private.</small><button className="op-text-button" onClick={() => { if (window.confirm('Rotate this QR card? The current code will stop working.')) rotate.mutate({ memberId: profile.data!.id }, { onSuccess: async () => { await client.invalidateQueries({ queryKey: getGetMemberDetailQueryKey(profile.data!.id) }); setSuccess('QR access card rotated.'); }, onError: (error: unknown) => setFormError(serverError(error, 'QR card could not be rotated.')) }); }} disabled={rotate.isPending} data-testid="button-rotate-qr"><RefreshCw size={14} /> {rotate.isPending ? 'Rotating…' : 'Rotate QR card'}</button>{formError && <span className="op-error-inline">{formError}</span>}</div></div><MemberFitnessPanel memberId={selected}/></>}</section></div>}
   </>;
 }
 

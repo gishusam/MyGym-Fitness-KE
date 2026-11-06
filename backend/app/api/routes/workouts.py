@@ -99,6 +99,13 @@ def _program_response(
         name=program.name,
         goal=program.goal,
         description=program.description,
+        goals_supported=program.goals_supported or [],
+        minimum_experience=program.minimum_experience,
+        maximum_experience=program.maximum_experience,
+        recommended_days_per_week=program.recommended_days_per_week,
+        expected_session_minutes=program.expected_session_minutes,
+        equipment_requirements=program.equipment_requirements or [],
+        trainer_review_required=program.trainer_review_required,
         status=program.status,
         created_at=program.created_at,
         updated_at=program.updated_at,
@@ -177,6 +184,13 @@ def create_workout_program(
         name=data.name,
         goal=data.goal,
         description=data.description,
+        goals_supported=data.goals_supported,
+        minimum_experience=data.minimum_experience,
+        maximum_experience=data.maximum_experience,
+        recommended_days_per_week=data.recommended_days_per_week,
+        expected_session_minutes=data.expected_session_minutes,
+        equipment_requirements=data.equipment_requirements,
+        trainer_review_required=data.trainer_review_required,
         status="active",
         created_by_staff_id=staff.id,
     )
@@ -220,6 +234,17 @@ def update_workout_program(
         raise HTTPException(
             status_code=422,
             detail={"error": "Workout name, goal and status cannot be cleared", "code": "invalid_workout_update"},
+        )
+    experience_order = {"beginner": 0, "intermediate": 1, "advanced": 2}
+    minimum_experience = updates.get("minimum_experience", program.minimum_experience)
+    maximum_experience = updates.get("maximum_experience", program.maximum_experience)
+    if experience_order[minimum_experience] > experience_order[maximum_experience]:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "Minimum experience cannot exceed maximum experience",
+                "code": "invalid_experience_range",
+            },
         )
     if "exercises" in changes.model_fields_set and changes.exercises is None:
         raise HTTPException(

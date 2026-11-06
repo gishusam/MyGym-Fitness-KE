@@ -55,12 +55,18 @@ import type {
   ListWorkoutProgramsParams,
   MemberDetail,
   MemberInput,
+  MemberOnboardingInput,
+  MemberOnboardingView,
   MemberPage,
   MemberQr,
   MemberUpdate,
   MembershipPlan,
   MembershipPlanInput,
   MembershipPlanUpdate,
+  OnboardingAssignmentInput,
+  OnboardingLinkResponse,
+  OnboardingReviewItem,
+  OnboardingRevocationResponse,
   Payment,
   PaymentInput,
   PaymentPage,
@@ -299,6 +305,12 @@ export function useGetCurrentStaff<TData = Awaited<ReturnType<typeof getCurrentS
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+
+
+
+
+
+
 export const getBootstrapInitialOwnerUrl = () => {
 
 
@@ -468,6 +480,13 @@ export function useGetGymSettings<TData = Awaited<ReturnType<typeof getGymSettin
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
+
 export const getUpdateGymSettingsUrl = () => {
 
 
@@ -657,6 +676,12 @@ export function useListMembers<TData = Awaited<ReturnType<typeof listMembers>>, 
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
 
 export const getCreateMemberUrl = () => {
 
@@ -2642,6 +2667,536 @@ export const useUpdateStaff = <TError = ErrorType<ApiError>,
         TContext
       > => {
       return useMutation(getUpdateStaffMutationOptions(options), queryClient);
+    }
+
+export const getCreateMemberOnboardingLinkUrl = (memberId: string,) => {
+
+
+
+
+  return `/api/members/${memberId}/onboarding-link`
+}
+
+/**
+ * Revokes any prior active onboarding link. The token is returned once and must be shared manually by staff.
+ * @summary Issue a fresh expiring member onboarding link
+ */
+export const createMemberOnboardingLink = async (memberId: string, options?: Parameters<typeof customFetch>[1]): Promise<OnboardingLinkResponse> => {
+
+  return customFetch<OnboardingLinkResponse>(getCreateMemberOnboardingLinkUrl(memberId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getCreateMemberOnboardingLinkMutationKey = () => ['createMemberOnboardingLink'] as const;
+
+export const getCreateMemberOnboardingLinkMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMemberOnboardingLink>>, TError,CreateMemberOnboardingLinkMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createMemberOnboardingLink>>, TError,CreateMemberOnboardingLinkMutationVariables, TContext> => {
+
+const mutationKey = getCreateMemberOnboardingLinkMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMemberOnboardingLink>>, CreateMemberOnboardingLinkMutationVariables> = (props) => {
+          const {memberId} = props ?? {};
+
+          return  createMemberOnboardingLink(memberId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateMemberOnboardingLinkMutationResult = NonNullable<Awaited<ReturnType<typeof createMemberOnboardingLink>>>
+
+    export type CreateMemberOnboardingLinkMutationError = ErrorType<ApiError>
+    export type CreateMemberOnboardingLinkMutationVariables = {memberId: string}
+
+    /**
+ * @summary Issue a fresh expiring member onboarding link
+ */
+export const useCreateMemberOnboardingLink = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMemberOnboardingLink>>, TError,CreateMemberOnboardingLinkMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createMemberOnboardingLink>>,
+        TError,
+        CreateMemberOnboardingLinkMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateMemberOnboardingLinkMutationOptions(options), queryClient);
+    }
+
+export const getRevokeMemberOnboardingLinkUrl = (memberId: string,) => {
+
+
+
+
+  return `/api/members/${memberId}/onboarding-link/revoke`
+}
+
+/**
+ * @summary Revoke active public onboarding links for a member
+ */
+export const revokeMemberOnboardingLink = async (memberId: string, options?: Parameters<typeof customFetch>[1]): Promise<OnboardingRevocationResponse> => {
+
+  return customFetch<OnboardingRevocationResponse>(getRevokeMemberOnboardingLinkUrl(memberId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRevokeMemberOnboardingLinkMutationKey = () => ['revokeMemberOnboardingLink'] as const;
+
+export const getRevokeMemberOnboardingLinkMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeMemberOnboardingLink>>, TError,RevokeMemberOnboardingLinkMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeMemberOnboardingLink>>, TError,RevokeMemberOnboardingLinkMutationVariables, TContext> => {
+
+const mutationKey = getRevokeMemberOnboardingLinkMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeMemberOnboardingLink>>, RevokeMemberOnboardingLinkMutationVariables> = (props) => {
+          const {memberId} = props ?? {};
+
+          return  revokeMemberOnboardingLink(memberId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeMemberOnboardingLinkMutationResult = NonNullable<Awaited<ReturnType<typeof revokeMemberOnboardingLink>>>
+
+    export type RevokeMemberOnboardingLinkMutationError = ErrorType<ApiError>
+    export type RevokeMemberOnboardingLinkMutationVariables = {memberId: string}
+
+    /**
+ * @summary Revoke active public onboarding links for a member
+ */
+export const useRevokeMemberOnboardingLink = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeMemberOnboardingLink>>, TError,RevokeMemberOnboardingLinkMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof revokeMemberOnboardingLink>>,
+        TError,
+        RevokeMemberOnboardingLinkMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRevokeMemberOnboardingLinkMutationOptions(options), queryClient);
+    }
+
+export const getGetPublicMemberOnboardingUrl = (token: string,) => {
+
+
+
+
+  return `/api/public/onboarding/${token}`
+}
+
+/**
+ * @summary Read member questionnaire and trainer decision using a secure link
+ */
+export const getPublicMemberOnboarding = async (token: string, options?: Parameters<typeof customFetch>[1]): Promise<MemberOnboardingView> => {
+
+  return customFetch<MemberOnboardingView>(getGetPublicMemberOnboardingUrl(token),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPublicMemberOnboardingQueryKey = (token: string,) => {
+    return [
+    `/api/public/onboarding/${token}`
+    ] as const;
+    }
+
+
+export const getGetPublicMemberOnboardingQueryOptions = <TData = Awaited<ReturnType<typeof getPublicMemberOnboarding>>, TError = ErrorType<ApiError>>(token: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPublicMemberOnboarding>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPublicMemberOnboardingQueryKey(token);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPublicMemberOnboarding>>> = ({ signal }) => getPublicMemberOnboarding(token, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: token !== null && token !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPublicMemberOnboarding>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetPublicMemberOnboardingQueryResult = NonNullable<Awaited<ReturnType<typeof getPublicMemberOnboarding>>>
+export type GetPublicMemberOnboardingQueryError = ErrorType<ApiError>
+
+
+export function useGetPublicMemberOnboarding<TData = Awaited<ReturnType<typeof getPublicMemberOnboarding>>, TError = ErrorType<ApiError>>(
+ token: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPublicMemberOnboarding>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPublicMemberOnboarding>>,
+          TError,
+          Awaited<ReturnType<typeof getPublicMemberOnboarding>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetPublicMemberOnboarding<TData = Awaited<ReturnType<typeof getPublicMemberOnboarding>>, TError = ErrorType<ApiError>>(
+ token: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPublicMemberOnboarding>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPublicMemberOnboarding>>,
+          TError,
+          Awaited<ReturnType<typeof getPublicMemberOnboarding>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetPublicMemberOnboarding<TData = Awaited<ReturnType<typeof getPublicMemberOnboarding>>, TError = ErrorType<ApiError>>(
+ token: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPublicMemberOnboarding>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Read member questionnaire and trainer decision using a secure link
+ */
+
+export function useGetPublicMemberOnboarding<TData = Awaited<ReturnType<typeof getPublicMemberOnboarding>>, TError = ErrorType<ApiError>>(
+ token: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPublicMemberOnboarding>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetPublicMemberOnboardingQueryOptions(token,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSubmitPublicMemberOnboardingUrl = (token: string,) => {
+
+
+
+
+  return `/api/public/onboarding/${token}`
+}
+
+/**
+ * Recommendations are matched only from active saved gym programs; no workout is assigned until a trainer reviews it.
+ * @summary Submit or update the member fitness questionnaire
+ */
+export const submitPublicMemberOnboarding = async (token: string,
+    memberOnboardingInput: MemberOnboardingInput, options?: Parameters<typeof customFetch>[1]): Promise<MemberOnboardingView> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<MemberOnboardingView>(getSubmitPublicMemberOnboardingUrl(token),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(memberOnboardingInput)
+  }
+);}
+
+
+
+
+
+export const getSubmitPublicMemberOnboardingMutationKey = () => ['submitPublicMemberOnboarding'] as const;
+
+export const getSubmitPublicMemberOnboardingMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitPublicMemberOnboarding>>, TError,SubmitPublicMemberOnboardingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitPublicMemberOnboarding>>, TError,SubmitPublicMemberOnboardingMutationVariables, TContext> => {
+
+const mutationKey = getSubmitPublicMemberOnboardingMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitPublicMemberOnboarding>>, SubmitPublicMemberOnboardingMutationVariables> = (props) => {
+          const {token,data} = props ?? {};
+
+          return  submitPublicMemberOnboarding(token,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubmitPublicMemberOnboardingMutationResult = NonNullable<Awaited<ReturnType<typeof submitPublicMemberOnboarding>>>
+    export type SubmitPublicMemberOnboardingMutationBody = BodyType<MemberOnboardingInput>
+    export type SubmitPublicMemberOnboardingMutationError = ErrorType<ApiError>
+    export type SubmitPublicMemberOnboardingMutationVariables = {token: string;data: BodyType<MemberOnboardingInput>}
+
+    /**
+ * @summary Submit or update the member fitness questionnaire
+ */
+export const useSubmitPublicMemberOnboarding = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitPublicMemberOnboarding>>, TError,SubmitPublicMemberOnboardingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof submitPublicMemberOnboarding>>,
+        TError,
+        SubmitPublicMemberOnboardingMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSubmitPublicMemberOnboardingMutationOptions(options), queryClient);
+    }
+
+export const getListMemberOnboardingReviewsUrl = () => {
+
+
+
+
+  return `/api/onboarding/reviews`
+}
+
+/**
+ * @summary List submitted member profiles awaiting trainer review
+ */
+export const listMemberOnboardingReviews = async ( options?: Parameters<typeof customFetch>[1]): Promise<OnboardingReviewItem[]> => {
+
+  return customFetch<OnboardingReviewItem[]>(getListMemberOnboardingReviewsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMemberOnboardingReviewsQueryKey = () => {
+    return [
+    `/api/onboarding/reviews`
+    ] as const;
+    }
+
+
+export const getListMemberOnboardingReviewsQueryOptions = <TData = Awaited<ReturnType<typeof listMemberOnboardingReviews>>, TError = ErrorType<ApiError>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMemberOnboardingReviews>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMemberOnboardingReviewsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMemberOnboardingReviews>>> = ({ signal }) => listMemberOnboardingReviews({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMemberOnboardingReviews>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListMemberOnboardingReviewsQueryResult = NonNullable<Awaited<ReturnType<typeof listMemberOnboardingReviews>>>
+export type ListMemberOnboardingReviewsQueryError = ErrorType<ApiError>
+
+
+export function useListMemberOnboardingReviews<TData = Awaited<ReturnType<typeof listMemberOnboardingReviews>>, TError = ErrorType<ApiError>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMemberOnboardingReviews>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMemberOnboardingReviews>>,
+          TError,
+          Awaited<ReturnType<typeof listMemberOnboardingReviews>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListMemberOnboardingReviews<TData = Awaited<ReturnType<typeof listMemberOnboardingReviews>>, TError = ErrorType<ApiError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMemberOnboardingReviews>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMemberOnboardingReviews>>,
+          TError,
+          Awaited<ReturnType<typeof listMemberOnboardingReviews>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListMemberOnboardingReviews<TData = Awaited<ReturnType<typeof listMemberOnboardingReviews>>, TError = ErrorType<ApiError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMemberOnboardingReviews>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List submitted member profiles awaiting trainer review
+ */
+
+export function useListMemberOnboardingReviews<TData = Awaited<ReturnType<typeof listMemberOnboardingReviews>>, TError = ErrorType<ApiError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMemberOnboardingReviews>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListMemberOnboardingReviewsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAssignReviewedOnboardingProgramUrl = (memberId: string,) => {
+
+
+
+
+  return `/api/onboarding/reviews/${memberId}/assign`
+}
+
+/**
+ * @summary Approve or change and assign a member program after trainer review
+ */
+export const assignReviewedOnboardingProgram = async (memberId: string,
+    onboardingAssignmentInput: OnboardingAssignmentInput, options?: Parameters<typeof customFetch>[1]): Promise<WorkoutAssignment> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<WorkoutAssignment>(getAssignReviewedOnboardingProgramUrl(memberId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(onboardingAssignmentInput)
+  }
+);}
+
+
+
+
+
+export const getAssignReviewedOnboardingProgramMutationKey = () => ['assignReviewedOnboardingProgram'] as const;
+
+export const getAssignReviewedOnboardingProgramMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignReviewedOnboardingProgram>>, TError,AssignReviewedOnboardingProgramMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof assignReviewedOnboardingProgram>>, TError,AssignReviewedOnboardingProgramMutationVariables, TContext> => {
+
+const mutationKey = getAssignReviewedOnboardingProgramMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assignReviewedOnboardingProgram>>, AssignReviewedOnboardingProgramMutationVariables> = (props) => {
+          const {memberId,data} = props ?? {};
+
+          return  assignReviewedOnboardingProgram(memberId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AssignReviewedOnboardingProgramMutationResult = NonNullable<Awaited<ReturnType<typeof assignReviewedOnboardingProgram>>>
+    export type AssignReviewedOnboardingProgramMutationBody = BodyType<OnboardingAssignmentInput>
+    export type AssignReviewedOnboardingProgramMutationError = ErrorType<ApiError>
+    export type AssignReviewedOnboardingProgramMutationVariables = {memberId: string;data: BodyType<OnboardingAssignmentInput>}
+
+    /**
+ * @summary Approve or change and assign a member program after trainer review
+ */
+export const useAssignReviewedOnboardingProgram = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignReviewedOnboardingProgram>>, TError,AssignReviewedOnboardingProgramMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof assignReviewedOnboardingProgram>>,
+        TError,
+        AssignReviewedOnboardingProgramMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAssignReviewedOnboardingProgramMutationOptions(options), queryClient);
     }
 
 export const getListWorkoutProgramsUrl = (params?: ListWorkoutProgramsParams,) => {

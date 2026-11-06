@@ -373,6 +373,38 @@ const blankExercise = (): ExerciseForm => ({
   name: '', sets: '3', repetitions: '10', durationSeconds: '', restSeconds: '60',
 });
 
+// MYGYM_WORKOUT_SHARE_V1
+// A link is created after approval; sending through WhatsApp still requires a human click.
+type WorkoutShare = {
+  assignmentId: string; token: string; memberName: string; phone: string; programName: string;
+  daysPerWeek: number; sessionMinutes: number; expiresAt: string;
+};
+function WorkoutShareCard({ share, onRevoke }: { share: WorkoutShare; onRevoke: () => Promise<void> }) {
+  const [copied, setCopied] = useState('');
+  const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+  const link = `${window.location.origin}${base}/my-workout/${encodeURIComponent(share.token)}`;
+  const digits = share.phone.replace(/\D/g, '').replace(/^0/, '254');
+  const firstName = share.memberName.split(' ')[0];
+  const message = `Hi ${firstName}! 💪\n\nYour MyGym workout is ready. Your trainer has approved *${share.programName}* (${share.daysPerWeek} days per week, approximately ${share.sessionMinutes} minutes per session).\n\nView and download your workout here:\n${link}\n\nOur trainers are available at the gym to guide you through the exercises. See you soon!`;
+  async function copy(text: string, label: string) {
+    try { await navigator.clipboard.writeText(text); setCopied(`${label} copied.`); }
+    catch { setCopied('Clipboard unavailable. Select and copy the link instead.'); }
+  }
+  return <div className="ws-workout-share" role="status">
+    <h3>Workout ready to share</h3>
+    <p>Prepared for {share.memberName}. WhatsApp does not send automatically — press Send in WhatsApp.</p>
+    <label className="ws-field">Private workout link<input readOnly value={link} onFocus={e=>e.currentTarget.select()} /></label>
+    <div className="ws-program-actions">
+      <button type="button" className="ws-button" onClick={()=>window.open(`https://wa.me/${digits}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer')}>Open WhatsApp</button>
+      <button type="button" className="ws-quiet-button" onClick={()=>copy(message,'Message')}>Copy message</button>
+      <button type="button" className="ws-quiet-button" onClick={()=>copy(link,'Link')}>Copy link</button>
+      <button type="button" className="ws-quiet-button" onClick={()=>void onRevoke()}>Revoke link</button>
+    </div>
+    {copied && <small>{copied}</small>}
+    <p className="ws-muted">The URL must use a public HTTPS address before sending it to another phone. Reissuing a link revokes its predecessor.</p>
+  </div>;
+}
+
 function OnboardingReviewQueue({ programs }: { programs: Workout[] }) {
   const client = useQueryClient();
   const [selectedPrograms, setSelectedPrograms] = useState<Record<string, string>>({});
@@ -381,6 +413,8 @@ function OnboardingReviewQueue({ programs }: { programs: Workout[] }) {
   const [safetyConfirmed, setSafetyConfirmed] = useState<Record<string, boolean>>({});
   const [formError, setFormError] = useState('');
   const [message, setMessage] = useState('');
+  const [shared, setShared] = useState<WorkoutShare | null>(null);
+  const [shareBusy, setShareBusy] = useState(false);
   const reviews = useQuery({
     queryKey: ['member-onboarding-reviews'],
     queryFn: () => request<OnboardingReview[]>('/api/onboarding/reviews'),
@@ -407,8 +441,19 @@ function OnboardingReviewQueue({ programs }: { programs: Workout[] }) {
         startsOn: startDates[item.memberId] || localToday(),
         notes: trainerNotes[item.memberId]?.trim() || null,
       })),
-    onSuccess: async () => {
-      setMessage('Trainer review saved and the final program assigned.');
+    onSuccess: async (result: unknown) => {
+      const approved = result as { id: string };
+      setShared(null);
+      setShareBusy(true);
+      try {
+        const data = await request<WorkoutShare>(`/api/workout-assignments/${approved.id}/share-link`, jsonBody('POST', {}));
+        setShared(data);
+        setMessage('Program approved. The WhatsApp message is ready below.');
+      } catch (error) {
+        setMessage('Program approved. Sharing link could not be prepared; use the Member plans tracker to retry.');
+        setFormError(serverError(error, 'Could not create a workout sharing link.'));
+      } finally { setShareBusy(false); }
+      // Trainer review saved and the final program assigned.
       setFormError('');
       await Promise.all([
         client.invalidateQueries({ queryKey: ['member-onboarding-reviews'] }),
@@ -468,6 +513,11 @@ function OnboardingReviewQueue({ programs }: { programs: Workout[] }) {
         })}</div>}
     {formError && <p className="ws-error" role="alert"><CircleAlert size={16} />{formError}</p>}
     {message && <p className="ws-success" role="status"><Check size={16} />{message}</p>}
+    {shareBusy && <p>Preparing secure workout link…</p>}
+    {shared && <WorkoutShareCard share={shared} onRevoke={async()=>{
+      await request(`/api/workout-assignments/${shared.assignmentId}/share-link/revoke`, jsonBody('POST', {}));
+      setShared(null); setMessage('Workout link revoked.');
+    }}/>}
   </section>;
 }
 
@@ -491,6 +541,8 @@ export function WorkoutsPage() {
   const [selectedMember, setSelectedMember] = useState<MemberOption | null>(null);
   const [startsOn, setStartsOn] = useState(localToday());
   const [assignmentNotes, setAssignmentNotes] = useState('');
+  const [lastShare, setLastShare] = useState<WorkoutShare | null>(null);
+  const [lastShareError, setLastShareError] = useState('');
   const [formError, setFormError] = useState('');
   const [message, setMessage] = useState('');
   const programs = useQuery({
@@ -747,7 +799,12 @@ export function WorkoutsPage() {
           <div className="ws-panel-head"><div><span className="ws-eyebrow">ASSIGNMENT TRACKER</span><h2>Member plans</h2></div></div>
           {assignments.isLoading ? <LoadingPanel /> : assignments.isError ? <p className="ws-empty">Assignments could not be loaded.</p> :
             (assignments.data ?? []).length === 0 ? <p className="ws-empty">No workout plans have been assigned yet.</p> :
-              <div className="ws-assignment-list">{(assignments.data ?? []).map((item) => <div className="ws-assignment-row" key={item.id}><span><b>{item.programName}</b><small>{item.memberName} · {item.memberNumber} · from {fmtDate(item.startsOn)}</small></span><select aria-label={`Status for ${item.memberName}`} value={item.status} onChange={(event) => updateAssignment.mutate({ id: item.id, status: event.target.value })}><option value="assigned">Assigned</option><option value="in_progress">In progress</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></div>)}</div>}
+              <div className="ws-assignment-list">{(assignments.data ?? []).map((item) => <div className="ws-assignment-row" key={item.id}><span><b>{item.programName}</b><small>{item.memberName} · {item.memberNumber} · from {fmtDate(item.startsOn)}</small></span><select aria-label={`Status for ${item.memberName}`} value={item.status} onChange={(event) => updateAssignment.mutate({ id: item.id, status: event.target.value })}><option value="assigned">Assigned</option><option value="in_progress">In progress</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select>{(item.status==='assigned'||item.status==='in_progress') && <button type="button" className="ws-quiet-button" onClick={async()=>{ try { setLastShareError(''); setLastShare(await request<WorkoutShare>(`/api/workout-assignments/${item.id}/share-link`, jsonBody('POST',{}))); } catch(error){ setLastShareError(serverError(error,'Could not prepare workout link')); } }}>Send workout</button>}</div>)}</div>}
+          {lastShareError && <p className="ws-error">{lastShareError}</p>}
+          {lastShare && <WorkoutShareCard share={lastShare} onRevoke={async()=>{
+            await request(`/api/workout-assignments/${lastShare.assignmentId}/share-link/revoke`,jsonBody('POST',{}));
+            setLastShare(null);
+          }}/>}
         </section>
       </div>
     </div>

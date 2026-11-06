@@ -1363,3 +1363,11 @@
   .ws-review-assign>.ws-field:last-child{grid-column:auto}
   .ws-review-facts{grid-template-columns:1fr}
 }
+
+/* MYGYM_WORKOUT_SHARE_V1 — consistent light workspace style */
+.ws-workout-share { margin-top: 20px; padding: 18px; border: 1px solid #cdded2; border-radius: 14px; background: #f3f8f4; }
+.ws-workout-share h3 { font-weight: 700; margin-bottom: 6px; color: #285d43; }
+.ws-workout-share p { margin: 6px 0 12px; color: #55665b; }
+.ws-workout-share .ws-program-actions { display: flex; flex-wrap: wrap; gap: 9px; margin: 12px 0; }
+.member-pdf-download { display: inline-flex; gap: 9px; align-items: center; background: #285d43; color: white; font-weight: 700; padding: 12px 16px; border-radius: 10px; margin-top: 16px; text-decoration: none; }
+.member-pdf-download:hover { background: #1e4833; color: white; }

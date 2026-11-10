@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { ClerkProvider, Show, SignIn, SignUp, useClerk, useAuth } from '@clerk/react';
 import { publishableKeyFromHost } from '@clerk/react/internal';
@@ -6,8 +6,8 @@ import { shadcn } from '@clerk/themes';
 import {
   Activity, ArrowDownRight, ArrowRight, ArrowUpRight, Check, CheckCircle2, CreditCard,
   CalendarDays, ChevronRight, CircleHelp, ClipboardList, Clock3, Dumbbell, ExternalLink,
-  Fingerprint, Gauge, LoaderCircle, LogOut, MapPin, Settings2, ShieldCheck,
-  SlidersHorizontal, QrCode, Sparkles, UserCog, UsersRound, Wallet, Wifi, XCircle,
+  Fingerprint, Gauge, LoaderCircle, LogOut, MapPin, Menu, Settings2, ShieldCheck,
+  SlidersHorizontal, QrCode, Sparkles, UserCog, UsersRound, Wallet, Wifi, X, XCircle,
 } from 'lucide-react';
 import { Link, Redirect, Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import {
@@ -184,6 +184,35 @@ function HomePage() {
 function AppShell({ staff, children }: { staff: CurrentStaff; children: ReactNode }) {
   const { signOut } = useClerk();
   const [location] = useLocation();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const mobileNavToggle = useRef<HTMLButtonElement>(null);
+  useEffect(() => setMobileNavOpen(false), [location]);
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    const navigation = document.getElementById('app-navigation');
+    const focusable = navigation?.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])');
+    focusable?.[0]?.focus();
+    const handleNavigationKeys = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMobileNavOpen(false);
+        mobileNavToggle.current?.focus();
+        return;
+      }
+      if (event.key === 'Tab' && focusable?.length) {
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleNavigationKeys);
+    return () => window.removeEventListener('keydown', handleNavigationKeys);
+  }, [mobileNavOpen]);
   const role = staff.role.charAt(0).toUpperCase() + staff.role.slice(1);
   const navigation = staff.role === 'trainer'
     ? [
@@ -212,15 +241,16 @@ function AppShell({ staff, children }: { staff: CurrentStaff; children: ReactNod
       ];
   const currentLabel = navigation.find((item) => item.href === location)?.label ?? 'Overview';
   return (
-    <div className="app-frame">
-      <aside className="sidebar">
+    <div className={`app-frame ${mobileNavOpen ? 'navigation-open' : ''}`}>
+      {mobileNavOpen && <button className="mobile-nav-scrim" onClick={() => { setMobileNavOpen(false); mobileNavToggle.current?.focus(); }} aria-label="Close navigation menu" />}
+      <aside className={`sidebar ${mobileNavOpen ? 'is-open' : ''}`} id="app-navigation">
         <div className="sidebar-brand"><Brand /></div>
         <div className="workspace-label">WORKSPACE</div>
         <div className="gym-switcher"><span className="gym-avatar"><Dumbbell size={18} /></span><span><b>Gym operations</b><small>Staff workspace</small></span><ChevronRight size={15} /></div>
         <div className="nav-label">YOUR SPACE</div>
         <nav className="side-nav" aria-label="Main navigation">
           {navigation.map(({ href, label, Icon }) => (
-            <Link key={href} href={href} className={`nav-item ${location === href ? 'selected' : ''}`} data-testid={`link-${href.replaceAll('/', '-').replace(/^-/, '')}`}>
+            <Link key={href} href={href} onClick={() => setMobileNavOpen(false)} className={`nav-item ${location === href ? 'selected' : ''}`} data-testid={`link-${href.replaceAll('/', '-').replace(/^-/, '')}`}>
               <Icon size={17} /><span>{label}</span>
               {href === '/settings/gym' && <span className="nav-owner">OWNER</span>}
             </Link>
@@ -232,7 +262,19 @@ function AppShell({ staff, children }: { staff: CurrentStaff; children: ReactNod
         </div>
       </aside>
       <div className="app-main">
-        <header className="topbar"><div className="breadcrumbs"><span>MyGym</span><ChevronRight size={14} /><b>{currentLabel}</b></div><div className="topbar-actions"><span className="topbar-status"><span className="status-dot" /> Staff workspace</span><span className="topbar-avatar">{initials(staff.name)}</span></div></header>
+        <header className="topbar">
+          <button
+            ref={mobileNavToggle}
+            type="button"
+            className="mobile-nav-toggle"
+            aria-label={mobileNavOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            aria-expanded={mobileNavOpen}
+            aria-controls="app-navigation"
+            onClick={() => setMobileNavOpen((open) => !open)}
+          >{mobileNavOpen ? <X size={18} /> : <Menu size={18} />}</button>
+          <div className="breadcrumbs"><span>MyGym</span><ChevronRight size={14} /><b>{currentLabel}</b></div>
+          <div className="topbar-actions"><span className="topbar-status"><span className="status-dot" /> Staff workspace</span><span className="topbar-avatar">{initials(staff.name)}</span></div>
+        </header>
         <main className="content-area page-enter">{children}</main>
       </div>
     </div>

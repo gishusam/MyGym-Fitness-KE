@@ -13,4 +13,6 @@ export interface ExpiringMembership {
   expiresOn: Date;
   /** @minimum 0 */
   daysRemaining: number;
+  /** @nullable */
+  phone: string | null;
 }

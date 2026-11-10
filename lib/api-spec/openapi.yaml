@@ -2381,13 +2381,20 @@ components:
         checkIns: { type: integer, minimum: 0 }
     ExpiringMembership:
       type: object
-      required: [memberId, memberNumber, fullName, expiresOn, daysRemaining]
+      required: [memberId, memberNumber, fullName, expiresOn, daysRemaining, phone]
       properties:
         memberId: { type: string, format: uuid }
         memberNumber: { type: string }
         fullName: { type: string }
         expiresOn: { type: string, format: date }
         daysRemaining: { type: integer, minimum: 0 }
+        phone: { type: [string, "null"] }
+    RevenueDay:
+      type: object
+      required: [day, amountKes]
+      properties:
+        day: { type: string, format: date }
+        amountKes: { type: integer, minimum: 0 }
     TrainerMember:
       type: object
       required: [id, memberNumber, fullName, status, assessmentCount]
@@ -2415,7 +2422,7 @@ components:
         visceralFatLevel: { type: [number, "null"] }
     DashboardSummary:
       type: object
-      required: [role, membershipsExpiring, attendanceTrend, upcomingEvents]
+      required: [role, membershipsExpiring, attendanceTrend, revenueTrend, upcomingEvents]
       properties:
         role: { $ref: "#/components/schemas/StaffRole" }
         activeMembers: { type: [integer, "null"] }
@@ -2425,11 +2432,16 @@ components:
         membershipsExpiring:
           type: array
           items: { $ref: "#/components/schemas/ExpiringMembership" }
+        membershipsExpiringCount: { type: [integer, "null"] }
+        expiredMembers: { type: [integer, "null"] }
         inactiveMembers: { type: [integer, "null"] }
         checkInsToday: { type: [integer, "null"] }
         attendanceTrend:
           type: array
           items: { $ref: "#/components/schemas/AttendanceDay" }
+        revenueTrend:
+          type: array
+          items: { $ref: "#/components/schemas/RevenueDay" }
         staffCount: { type: [integer, "null"] }
         trainerMemberCount: { type: [integer, "null"] }
         recentAssessments: { type: [integer, "null"] }

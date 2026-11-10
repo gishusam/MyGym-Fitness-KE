@@ -55,12 +55,18 @@ class AttendanceDay(ApiModel):
     check_ins: int
 
 
+class RevenueDay(ApiModel):
+    day: date
+    amount_kes: int
+
+
 class ExpiringMembership(ApiModel):
     member_id: UUID
     member_number: str
     full_name: str
     expires_on: date
     days_remaining: int
+    phone: str | None = None
 
 
 class TrainerMember(ApiModel):
@@ -325,9 +331,12 @@ class DashboardSummary(ApiModel):
     revenue_this_month_kes: int | None = None
     payments_this_month: int | None = None
     memberships_expiring: list[ExpiringMembership] = Field(default_factory=list)
+    memberships_expiring_count: int | None = None
+    expired_members: int | None = None
     inactive_members: int | None = None
     check_ins_today: int | None = None
     attendance_trend: list[AttendanceDay] = Field(default_factory=list)
+    revenue_trend: list[RevenueDay] = Field(default_factory=list)
     staff_count: int | None = None
     trainer_member_count: int | None = None
     recent_assessments: int | None = None

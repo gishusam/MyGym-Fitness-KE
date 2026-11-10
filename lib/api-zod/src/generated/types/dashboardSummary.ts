@@ -8,6 +8,7 @@
 import type { AttendanceDay } from './attendanceDay';
 import type { ExpiringMembership } from './expiringMembership';
 import type { GymEvent } from './gymEvent';
+import type { RevenueDay } from './revenueDay';
 import type { StaffRole } from './staffRole';
 
 export interface DashboardSummary {
@@ -22,10 +23,15 @@ export interface DashboardSummary {
   paymentsThisMonth?: number | null;
   membershipsExpiring: ExpiringMembership[];
   /** @nullable */
+  membershipsExpiringCount?: number | null;
+  /** @nullable */
+  expiredMembers?: number | null;
+  /** @nullable */
   inactiveMembers?: number | null;
   /** @nullable */
   checkInsToday?: number | null;
   attendanceTrend: AttendanceDay[];
+  revenueTrend: RevenueDay[];
   /** @nullable */
   staffCount?: number | null;
   /** @nullable */

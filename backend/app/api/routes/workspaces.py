@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime, time, timedelta, timezone
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import and_, func, or_, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from backend.app.core.auth import get_current_staff, require_owner_or_trainer
 from backend.app.db.session import get_db
@@ -22,6 +22,7 @@ from backend.app.schemas.workspaces import (
     EventMember,
     EventResponse,
     ExpiringMembership,
+    RevenueDay,
     TrainerMember,
 )
 from backend.app.services.operations import get_gym_timezone, gym_now, local_day_bounds
@@ -61,7 +62,7 @@ def _event_response(session: Session, event: GymEvent, instructor_name: str | No
 
 
 def _expiring_memberships(
-    session: Session, today: date, days_ahead: int
+    session: Session, today: date, days_ahead: int, include_phone: bool = False
 ) -> list[ExpiringMembership]:
     rows = session.execute(
         select(Subscription, Member)
@@ -83,9 +84,48 @@ def _expiring_memberships(
             full_name=member.full_name,
             expires_on=subscription.expires_on,
             days_remaining=max((subscription.expires_on - today).days, 0),
+            phone=member.phone if include_phone else None,
         )
         for subscription, member in rows
     ]
+
+
+def _membership_followup_counts(
+    session: Session, today: date, days_ahead: int
+) -> tuple[int, int]:
+    expiring_count = session.scalar(
+        select(func.count(func.distinct(Subscription.member_id)))
+        .join(Member, Subscription.member_id == Member.id)
+        .where(
+            Subscription.status != SubscriptionStatus.CANCELLED.value,
+            Subscription.starts_on <= today,
+            Subscription.expires_on >= today,
+            Subscription.expires_on <= today + timedelta(days=days_ahead),
+            Member.status == MemberStatus.ACTIVE.value,
+        )
+    ) or 0
+    current_subscription = aliased(Subscription)
+    has_current_subscription = (
+        select(current_subscription.id)
+        .where(
+            current_subscription.member_id == Member.id,
+            current_subscription.status != SubscriptionStatus.CANCELLED.value,
+            current_subscription.starts_on <= today,
+            current_subscription.expires_on >= today,
+        )
+        .exists()
+    )
+    expired_count = session.scalar(
+        select(func.count(func.distinct(Subscription.member_id)))
+        .join(Member, Subscription.member_id == Member.id)
+        .where(
+            Subscription.status != SubscriptionStatus.CANCELLED.value,
+            Subscription.expires_on < today,
+            Member.status == MemberStatus.ACTIVE.value,
+            ~has_current_subscription,
+        )
+    ) or 0
+    return expiring_count, expired_count
 
 
 def _attendance_trend(session: Session, today: date) -> list[AttendanceDay]:
@@ -103,6 +143,29 @@ def _attendance_trend(session: Session, today: date) -> list[AttendanceDay]:
     for timestamp in rows:
         counts[_aware_utc(timestamp).astimezone(zone).date()] += 1
     return [AttendanceDay(day=day, check_ins=count) for day, count in counts.items()]
+
+
+def _revenue_trend(session: Session, today: date) -> list[RevenueDay]:
+    zone = get_gym_timezone(session)
+    first_day = today.replace(day=1)
+    days_in_range = (today - first_day).days + 1
+    start_utc, _ = local_day_bounds(first_day, zone)
+    _, end_utc = local_day_bounds(today, zone)
+    payments = session.execute(
+        select(Payment.paid_at, Payment.amount_kes).where(
+            Payment.status == PaymentStatus.RECORDED.value,
+            Payment.paid_at >= start_utc,
+            Payment.paid_at < end_utc,
+        )
+    ).all()
+    totals = {first_day + timedelta(days=index): 0 for index in range(days_in_range)}
+    for paid_at, amount_kes in payments:
+        local_day = _aware_utc(paid_at).astimezone(zone).date()
+        totals[local_day] += amount_kes
+    return [
+        RevenueDay(day=day, amount_kes=amount_kes)
+        for day, amount_kes in totals.items()
+    ]
 
 
 @router.get(
@@ -127,7 +190,15 @@ def dashboard_summary(
             CheckIn.checked_in_at < tomorrow_start,
         )
     ) or 0
-    expiring = _expiring_memberships(session, today, renewal_days)
+    expiring_count, expired_count = _membership_followup_counts(
+        session, today, renewal_days
+    )
+    expiring = _expiring_memberships(
+        session,
+        today,
+        renewal_days,
+        include_phone=staff.role in ("owner", "receptionist"),
+    )
 
     if staff.role == "owner":
         active_members = session.scalar(
@@ -175,8 +246,11 @@ def dashboard_summary(
             revenue_this_month_kes=int(revenue) if payment_count else None,
             payments_this_month=payment_count,
             memberships_expiring=expiring,
+            memberships_expiring_count=expiring_count,
+            expired_members=expired_count,
             check_ins_today=check_ins_today,
             attendance_trend=_attendance_trend(session, today),
+            revenue_trend=_revenue_trend(session, today),
             staff_count=staff_count,
         )
 
@@ -189,6 +263,7 @@ def dashboard_summary(
         return DashboardSummary(
             role=staff.role,
             memberships_expiring=expiring,
+            memberships_expiring_count=expiring_count,
             inactive_members=inactive_count,
             check_ins_today=check_ins_today,
         )

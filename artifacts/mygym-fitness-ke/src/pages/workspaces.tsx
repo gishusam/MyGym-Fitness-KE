@@ -129,16 +129,20 @@ type Summary = {
   newMembersLast30Days?: number | null;
   revenueThisMonthKes?: number | null;
   paymentsThisMonth?: number | null;
+  membershipsExpiringCount?: number | null;
+  expiredMembers?: number | null;
   membershipsExpiring: Array<{
     memberId: string;
     memberNumber: string;
     fullName: string;
     expiresOn: string;
     daysRemaining: number;
+    phone?: string | null;
   }>;
   inactiveMembers?: number | null;
   checkInsToday?: number | null;
   attendanceTrend: Array<{ day: string; checkIns: number }>;
+  revenueTrend: Array<{ day: string; amountKes: number }>;
   staffCount?: number | null;
   trainerMemberCount?: number | null;
   recentAssessments?: number | null;
@@ -205,19 +209,230 @@ function StatCard({ label, value, note, Icon }: {
   return <article className="ws-stat"><span className="ws-stat-icon"><Icon size={18} /></span><span className="ws-stat-label">{label}</span><b>{value}</b><small>{note}</small></article>;
 }
 
-type RetentionItem = { memberId: string; memberNumber: string; name: string; signals: {code: string; label: string; detail: string}[] };
+type RetentionItem = { memberId: string; memberNumber: string; name: string; phone: string; signals: {code: string; label: string; detail: string}[] };
 type RetentionSummary = { atRiskCount: number; inactiveCount: number; expiringCount: number; signals: RetentionItem[] };
 
-function MemberRetentionPanel() {
-  const query = useQuery({queryKey:['owner-retention'], queryFn:()=>request<RetentionSummary>('/api/dashboard/retention'), staleTime:60000});
-  if (query.isLoading) return <section className="ws-panel"><LoadingPanel /></section>;
-  if (query.isError || !query.data) return <section className="ws-panel"><p className="ws-empty">Member follow-up indicators are unavailable.</p></section>;
-  const data = query.data;
-  return <section className="ws-panel m8-retention" aria-label="Member retention signals">
-    <div className="ws-panel-head"><div><span className="ws-eyebrow">MEMBER RETENTION</span><h2>Members who may need attention</h2><p>Rule-based signals from memberships and check-ins, not predictions.</p></div><Link href="/members" className="ws-text-link">Open members <ArrowRight size={15}/></Link></div>
-    <div className="m8-retention-stats"><div><b>{data.expiringCount}</b><small>Renewals due</small></div><div><b>{data.inactiveCount}</b><small>14+ days without visits</small></div><div><b>{data.atRiskCount}</b><small>Declining attendance</small></div></div>
-    {data.signals.length ? <div className="m8-retention-rows">{data.signals.slice(0,8).map(m=><div key={m.memberId} className="m8-retention-row"><div><strong>{m.name}</strong><small>{m.memberNumber}</small></div><div>{m.signals.map(s=><span key={s.code} title={s.detail} className="m8-signal">{s.label} · {s.detail}</span>)}</div></div>)}</div> : <p className="ws-empty">No members currently meet these follow-up rules.</p>}
-  </section>;
+function initials(name: string) {
+  return name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0].toUpperCase()).join('') || 'MG';
+}
+
+function whatsappHref(phone: string, message: string) {
+  let digits = phone.replace(/\D/g, '');
+  if (digits.startsWith('0')) digits = `254${digits.slice(1)}`;
+  else if (!digits.startsWith('254')) digits = `254${digits}`;
+  return digits ? `https://wa.me/${digits}?text=${encodeURIComponent(message)}` : '';
+}
+
+function chartDate(day: string) {
+  return new Intl.DateTimeFormat('en-KE', { day: 'numeric', month: 'short', timeZone: 'Africa/Nairobi' })
+    .format(new Date(`${day}T12:00:00Z`));
+}
+
+function chartWeekday(day: string) {
+  return new Intl.DateTimeFormat('en-KE', { weekday: 'short', timeZone: 'Africa/Nairobi' })
+    .format(new Date(`${day}T12:00:00Z`));
+}
+
+function RevenueChart({ data }: { data: Summary['revenueTrend'] }) {
+  const hasRevenue = data.some((item) => item.amountKes > 0);
+  const width = 760;
+  const height = 170;
+  const left = 48;
+  const right = 12;
+  const top = 12;
+  const bottom = 25;
+  const plotWidth = width - left - right;
+  const plotHeight = height - top - bottom;
+  const maxAmount = Math.max(1, ...data.map((item) => item.amountKes));
+  const ticks = [...new Set([0, Math.round(maxAmount / 2), maxAmount])];
+  const points = data.map((item, index) => {
+    const x = left + (data.length > 1 ? (index * plotWidth) / (data.length - 1) : plotWidth / 2);
+    const y = top + plotHeight - (item.amountKes / maxAmount) * plotHeight;
+    return { ...item, x, y, index };
+  });
+  const labelIndexes = [...new Set([0, 6, 12, 18, 24, data.length - 1])].filter((index) => index >= 0 && index < data.length);
+  return <div className="owner-chart owner-chart-dark">
+    <svg className="owner-chart-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="KES recorded per day">
+      {ticks.map((value) => {
+        const y = top + plotHeight - (value / maxAmount) * plotHeight;
+        return <g key={value}>
+          <line x1={left} y1={y} x2={width - right} y2={y} stroke="rgba(255,255,255,.15)" strokeDasharray="3 5" />
+          <text x={left - 8} y={y + 3} textAnchor="end" fill="#d1e2d8" fontSize="9">{nfmt.format(value)}</text>
+        </g>;
+      })}
+      <polyline points={points.map((point) => `${point.x},${point.y}`).join(' ')} fill="none" stroke="#E98E2E" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
+      {points.filter((point) => point.index % 6 === 0 || point.index === data.length - 1).map((point) => <circle key={point.day} cx={point.x} cy={point.y} r="3" fill="#E98E2E">
+        <title>{chartDate(point.day)}: KES {nfmt.format(point.amountKes)}</title>
+      </circle>)}
+      {labelIndexes.map((index) => {
+        const point = points[index];
+        return <text key={point.day} x={point.x} y={height - 5} textAnchor="middle" fill="#d1e2d8" fontSize="9">{chartDate(point.day)}</text>;
+      })}
+    </svg>
+    {!hasRevenue && <span className="owner-chart-empty">No recorded payments in the last 30 days</span>}
+  </div>;
+}
+
+function AttendanceChart({ data }: { data: Summary['attendanceTrend'] }) {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Nairobi' }).format(new Date());
+  const width = 430;
+  const height = 170;
+  const left = 32;
+  const right = 10;
+  const top = 12;
+  const bottom = 28;
+  const plotWidth = width - left - right;
+  const plotHeight = height - top - bottom;
+  const maxCheckIns = Math.max(1, ...data.map((item) => item.checkIns));
+  const ticks = [...new Set([0, Math.round(maxCheckIns / 2), maxCheckIns])];
+  const slotWidth = data.length ? plotWidth / data.length : plotWidth;
+  return <div className="owner-chart">
+    <svg className="owner-chart-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Check-ins per day">
+      {ticks.map((value) => {
+        const y = top + plotHeight - (value / maxCheckIns) * plotHeight;
+        return <g key={value}>
+          <line x1={left} y1={y} x2={width - right} y2={y} stroke="#e7ece8" strokeDasharray="3 5" />
+          <text x={left - 7} y={y + 3} textAnchor="end" fill="#77877d" fontSize="9">{value}</text>
+        </g>;
+      })}
+      {data.map((item, index) => {
+        const barWidth = slotWidth * .62;
+        const barHeight = (item.checkIns / maxCheckIns) * plotHeight;
+        const x = left + index * slotWidth + (slotWidth - barWidth) / 2;
+        const y = top + plotHeight - barHeight;
+        const isToday = item.day === today;
+        return <g key={item.day}>
+          <rect x={x} y={y} width={barWidth} height={barHeight} rx="5" fill={isToday ? '#E98E2E' : '#88C3A3'}>
+            <title>{chartDate(item.day)}: {item.checkIns} check-ins</title>
+          </rect>
+          <text x={x + barWidth / 2} y={height - 6} textAnchor="middle" fill={isToday ? '#9a5a1a' : '#77877d'} fontSize="10" fontWeight={isToday ? '700' : '400'}>{chartWeekday(item.day)}</text>
+        </g>;
+      })}
+    </svg>
+  </div>;
+}
+
+function OwnerFollowUpPanels({
+  summary,
+  retention,
+  retentionLoading,
+  retentionError,
+}: {
+  summary: Summary;
+  retention?: RetentionSummary;
+  retentionLoading: boolean;
+  retentionError: boolean;
+}) {
+  const expiring = summary.membershipsExpiring.slice(0, 4);
+  const risks = (retention?.signals ?? [])
+    .filter((member) => member.signals.some((signal) => signal.code === 'inactive_visits' || signal.code === 'declining_visits'))
+    .slice(0, 4);
+
+  return <div className="owner-followup-grid">
+    <section className="owner-followup-panel">
+      <div className="owner-followup-heading">
+        <div><span className="ws-eyebrow">RENEWALS</span><h2>Expiring soon</h2></div>
+        <Link href="/subscriptions" className="owner-followup-link">View subscriptions <ArrowRight size={14} /></Link>
+      </div>
+      {expiring.length ? <div className="owner-member-list">
+        {expiring.map((member) => {
+          const firstName = member.fullName.trim().split(/\s+/)[0] || 'there';
+          const message = `Hi ${firstName}, your MyGym membership is due to expire on ${fmtDate(member.expiresOn)}. Reply here if you would like help with your renewal.`;
+          const href = member.phone ? whatsappHref(member.phone, message) : '';
+          return <div className="owner-member-row" key={member.memberId}>
+            <span className="owner-member-avatar">{initials(member.fullName)}</span>
+            <span className="owner-member-copy"><b>{member.fullName}</b><small>{member.memberNumber}</small></span>
+            <span className="owner-member-tag">{member.daysRemaining === 0 ? 'Today' : member.daysRemaining === 1 ? 'Tomorrow' : `${member.daysRemaining} days`}</span>
+            {href ? <a className="owner-row-action" href={href} target="_blank" rel="noreferrer" aria-label={`Prepare renewal reminder for ${member.fullName}`}>Remind</a> : <span className="owner-row-action is-disabled">No phone</span>}
+          </div>;
+        })}
+      </div> : <p className="owner-empty">No memberships are due within the configured reminder window.</p>}
+      <div className="owner-followup-foot"><span>{summary.membershipsExpiringCount ?? expiring.length} members in the reminder window</span><Link href="/members">Register member <ArrowRight size={13} /></Link></div>
+    </section>
+
+    <section className="owner-followup-panel">
+      <div className="owner-followup-heading">
+        <div><span className="ws-eyebrow">RETENTION SIGNALS</span><h2>Members to check in with</h2></div>
+        <span className="owner-rule-note">Rule-based</span>
+      </div>
+      {retentionLoading ? <p className="owner-empty">Loading member follow-up signals…</p>
+        : retentionError ? <p className="owner-empty">Follow-up indicators are unavailable right now.</p>
+        : risks.length ? <div className="owner-member-list">
+          {risks.map((member) => {
+            const firstName = member.name.trim().split(/\s+/)[0] || 'there';
+            const message = `Hi ${firstName}, just checking in from MyGym. We hope you are doing well. Would you like help planning your next visit?`;
+            const href = whatsappHref(member.phone, message);
+            const signal = member.signals.find((item) => item.code === 'inactive_visits' || item.code === 'declining_visits');
+            return <div className="owner-member-row" key={member.memberId}>
+              <span className="owner-member-avatar is-retention">{initials(member.name)}</span>
+              <span className="owner-member-copy"><b>{member.name}</b><small>{signal?.detail ?? member.memberNumber}</small></span>
+              <span className="owner-member-tag is-retention">{signal?.label ?? 'Follow up'}</span>
+              {href ? <a className="owner-row-action" href={href} target="_blank" rel="noreferrer" aria-label={`Prepare a check-in message for ${member.name}`}>Message</a> : <span className="owner-row-action is-disabled">No phone</span>}
+            </div>;
+          })}
+        </div> : <p className="owner-empty">No members currently meet the inactivity or declining-visit rules.</p>}
+      <div className="owner-followup-foot"><span>{retention ? retention.inactiveCount + retention.atRiskCount : '—'} rule-based follow-up signals</span><span className="owner-explain">14+ days without visits or a sustained visit decline</span></div>
+    </section>
+  </div>;
+}
+
+function OwnerDashboard({
+  staff,
+  summary,
+  retention,
+  retentionLoading,
+  retentionError,
+}: {
+  staff: CurrentStaff;
+  summary: Summary;
+  retention?: RetentionSummary;
+  retentionLoading: boolean;
+  retentionError: boolean;
+}) {
+  const firstName = staff.name.split(/\s+/)[0] || 'there';
+  const today = new Intl.DateTimeFormat('en-KE', {
+    weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Africa/Nairobi',
+  }).format(new Date());
+  const hour = Number(new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hour12: false, timeZone: 'Africa/Nairobi' }).format(new Date()));
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const followUpCount = retention ? retention.atRiskCount + retention.inactiveCount : '—';
+  const weeklyCheckIns = summary.attendanceTrend.reduce((total, item) => total + item.checkIns, 0);
+  const revenue = summary.revenueThisMonthKes ?? 0;
+  const stats = [
+    { label: 'Active members', value: summary.activeMembers ?? 0, note: `+${summary.newMembersLast30Days ?? 0} joined in the last 30 days`, Icon: UsersRound, tone: 'active' },
+    { label: 'Expiring soon', value: summary.membershipsExpiringCount ?? summary.membershipsExpiring.length, note: 'Within the configured reminder window', Icon: Clock3, tone: 'expiring' },
+    { label: 'Expired memberships', value: summary.expiredMembers ?? 0, note: 'Active profiles with no current membership', Icon: CircleAlert, tone: 'expired' },
+    { label: 'Likely to churn', value: followUpCount, note: 'Rule-based inactivity or visit decline', Icon: Activity, tone: 'retention' },
+  ];
+
+  return <div className="ws-page owner-dashboard">
+    <header className="ws-heading owner-heading">
+      <div><span className="ws-eyebrow">{today}</span><h1>{greeting}, {firstName}</h1><p>Your gym at a glance: who is active, what needs renewal, and where to follow up.</p></div>
+      <Link href="/members" className="ws-button ws-button-primary owner-register-action"><Plus size={16} /> Register member</Link>
+    </header>
+    <div className="ws-stat-grid owner-stat-grid">
+      {stats.map(({ label, value, note, Icon, tone }) => <article className={`ws-stat owner-stat tone-${tone}`} key={label}>
+        <span className="ws-stat-icon"><Icon size={18} /></span><span className="ws-stat-label">{label}</span><b>{value}</b><small>{note}</small>
+      </article>)}
+    </div>
+    <div className="owner-chart-grid">
+      <section className="owner-revenue-panel">
+        <div className="owner-chart-heading"><div><span>REVENUE THIS MONTH</span><h2>KES {nfmt.format(revenue)}</h2><p>{summary.paymentsThisMonth ?? 0} recorded payments this month</p></div><span className="owner-chart-period">Month to date</span></div>
+        <RevenueChart data={summary.revenueTrend} />
+      </section>
+      <section className="owner-attendance-panel">
+        <div className="owner-chart-heading"><div><span>CHECK-INS THIS WEEK</span><h2>{nfmt.format(weeklyCheckIns)}</h2><p>Recorded gym visits over the last 7 days</p></div></div>
+        <AttendanceChart data={summary.attendanceTrend} />
+      </section>
+    </div>
+    <OwnerFollowUpPanels
+      summary={summary}
+      retention={retention}
+      retentionLoading={retentionLoading}
+      retentionError={retentionError}
+    />
+    <p className="owner-data-note"><ShieldCheck size={14} /> All figures come from saved gym records. Follow-up signals are explainable rules, not predictions.</p>
+  </div>;
 }
 
 export function WorkspaceOverview({ staff }: { staff: CurrentStaff }) {
@@ -226,24 +441,31 @@ export function WorkspaceOverview({ staff }: { staff: CurrentStaff }) {
     queryFn: () => request<Summary>('/api/dashboard/summary'),
     staleTime: 30_000,
   });
+  const retentionQuery = useQuery({
+    queryKey: ['owner-retention'],
+    queryFn: () => request<RetentionSummary>('/api/dashboard/retention'),
+    enabled: staff.role === 'owner',
+    staleTime: 60_000,
+  });
   if (query.isLoading) return <LoadingPanel />;
   if (query.isError || !query.data) {
     return <div className="ws-error"><CircleAlert size={18} />{errorNotice(query.error, 'Dashboard information could not be loaded. Try refreshing.')}</div>;
   }
   const summary = query.data;
+  if (staff.role === 'owner') {
+    return <OwnerDashboard
+      staff={staff}
+      summary={summary}
+      retention={retentionQuery.data}
+      retentionLoading={retentionQuery.isLoading}
+      retentionError={retentionQuery.isError}
+    />;
+  }
   const firstName = staff.name.split(' ')[0] || 'there';
   const today = new Intl.DateTimeFormat('en-KE', {
     weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Africa/Nairobi',
   }).format(new Date());
-  const stats = staff.role === 'owner'
-    ? [
-        { label: 'Active memberships', value: summary.activeMembers ?? 0, note: 'Current access today', Icon: UsersRound },
-        { label: 'New members', value: summary.newMembersLast30Days ?? 0, note: 'Registered in the last 30 days', Icon: Activity },
-        { label: 'Recorded revenue', value: summary.revenueThisMonthKes == null ? '—' : `KES ${nfmt.format(summary.revenueThisMonthKes)}`, note: `${summary.paymentsThisMonth ?? 0} recorded payments this month`, Icon: ShieldCheck },
-        { label: 'Check-ins today', value: summary.checkInsToday ?? 0, note: 'Gym-local calendar day', Icon: CalendarDays },
-        { label: 'Active staff', value: summary.staffCount ?? 0, note: 'Owner, receptionist and trainer accounts', Icon: UserCog },
-      ]
-    : staff.role === 'receptionist'
+  const stats = staff.role === 'receptionist'
       ? [
           { label: 'Check-ins today', value: summary.checkInsToday ?? 0, note: 'Gym-local calendar day', Icon: CalendarDays },
           { label: 'Renewals coming up', value: summary.membershipsExpiring.length, note: 'Within the reminder window', Icon: Clock3 },
@@ -255,19 +477,16 @@ export function WorkspaceOverview({ staff }: { staff: CurrentStaff }) {
           { label: 'Active assignments', value: summary.assignedWorkouts ?? 0, note: 'Assigned or in progress', Icon: Dumbbell },
           { label: 'Upcoming events', value: summary.upcomingEvents.length, note: 'Published gym events', Icon: CalendarDays },
         ];
-  const title = staff.role === 'owner' ? 'Your gym at a glance' : staff.role === 'receptionist' ? 'Today’s front desk' : 'Your coaching workspace';
-  const intro = staff.role === 'owner'
-    ? 'A live view of memberships, recorded payments, attendance and your team.'
-    : staff.role === 'receptionist'
-      ? 'Quick context for arrivals, renewals and member support.'
-      : 'Fitness follow-ups, workout plans and the next events on the calendar.';
+  const title = staff.role === 'receptionist' ? 'Today’s front desk' : 'Your coaching workspace';
+  const intro = staff.role === 'receptionist'
+    ? 'Quick context for arrivals, renewals and member support.'
+    : 'Fitness follow-ups, workout plans and the next events on the calendar.';
   return <div className="ws-page">
     <WorkspaceHeading eyebrow={`${staff.role.toUpperCase()} WORKSPACE`} title={`Good to see you, ${firstName}.`} description={intro} />
     <div className="ws-date-line"><span className="ws-date-dot" />{today}<span>·</span> Figures shown here come from saved gym records.</div>
     <div className={`ws-stat-grid ${staff.role === 'receptionist' ? 'is-frontdesk' : ''}`}>
       {stats.map(({ label, value, note, Icon }) => <StatCard key={label} label={label} value={value} note={note} Icon={Icon} />)}
     </div>
-    {staff.role === 'owner' && <MemberRetentionPanel />}
     {staff.role !== 'trainer' && <section className="ws-panel">
       <div className="ws-panel-head"><div><span className="ws-eyebrow">MEMBER FOLLOW-UP</span><h2>Memberships expiring soon</h2></div><Link className="ws-text-link" href="/subscriptions">Open subscriptions <ArrowRight size={15} /></Link></div>
       {summary.membershipsExpiring.length === 0
@@ -283,7 +502,6 @@ export function WorkspaceOverview({ staff }: { staff: CurrentStaff }) {
         : <div className="ws-event-list">{summary.upcomingEvents.map((event) => <div className="ws-event-row" key={event.id}><span className="ws-event-icon"><CalendarDays size={17} /></span><span><b>{event.name}</b><small>{fmtDateTime(event.startsAt)}{event.instructorName ? ` · ${event.instructorName}` : ''}</small></span><span className="ws-capacity">{event.registeredCount}/{event.capacity} booked</span></div>)}</div>}
     </section>}
     <div className="ws-quick-links">
-      {staff.role === 'owner' && <Link href="/staff"><UserCog size={17} /><span><b>Manage staff access</b><small>Add a verified staff account or update a role</small></span><ArrowRight size={16} /></Link>}
       {staff.role === 'trainer' && <Link href="/trainer/members"><UsersRound size={17} /><span><b>Open fitness members</b><small>Review assessments and record a check-in</small></span><ArrowRight size={16} /></Link>}
       <Link href="/events"><CalendarDays size={17} /><span><b>Gym events</b><small>Create a class or register a member</small></span><ArrowRight size={16} /></Link>
       {staff.role !== 'receptionist' && <Link href="/workouts"><Dumbbell size={17} /><span><b>Workout library</b><small>Prepare a reusable plan for a member</small></span><ArrowRight size={16} /></Link>}

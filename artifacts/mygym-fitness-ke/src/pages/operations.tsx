@@ -4,7 +4,7 @@ import { BrowserMultiFormatReader } from '@zxing/browser';
 import { QRCodeSVG } from 'qrcode.react';
 import {
   ArrowLeft, ArrowRight, CalendarDays, Check, ChevronLeft, ChevronRight, CircleAlert, Copy,
-  Clock3, CreditCard, Dumbbell, Gauge, LoaderCircle, Pencil, Plus, QrCode, RefreshCw,
+  Clock3, CreditCard, Dumbbell, Gauge, LoaderCircle, Menu, Pencil, Plus, QrCode, RefreshCw,
   MessageCircle, Search, ShieldCheck, UserCog, UserRound, UsersRound, Wallet, X,
 } from 'lucide-react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
@@ -56,6 +56,35 @@ function Heading({ eyebrow, title, detail, action }: { eyebrow: string; title: s
 export function StaffFrame({ children, active }: { children: ReactNode; active: Kind }) {
   const staff = useGetCurrentStaff();
   const [location] = useLocation();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const mobileNavToggle = useRef<HTMLButtonElement>(null);
+  useEffect(() => setMobileNavOpen(false), [location]);
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    const navigation = document.getElementById('operation-navigation');
+    const focusable = navigation?.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])');
+    focusable?.[0]?.focus();
+    const handleNavigationKeys = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMobileNavOpen(false);
+        mobileNavToggle.current?.focus();
+        return;
+      }
+      if (event.key === 'Tab' && focusable?.length) {
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleNavigationKeys);
+    return () => window.removeEventListener('keydown', handleNavigationKeys);
+  }, [mobileNavOpen]);
   const allNav: [Kind, string, typeof UsersRound, Array<'owner' | 'receptionist' | 'trainer'>][] = [
     ['members', 'Members', UsersRound, ['owner', 'receptionist']],
     ['membership-plans', 'Plans', Dumbbell, ['owner', 'receptionist']],
@@ -72,18 +101,30 @@ export function StaffFrame({ children, active }: { children: ReactNode; active: 
   if (staff.isLoading) return <div className="op-loading"><LoadingRows /></div>;
   if (staff.error || !staff.data) return <div className="op-loading"><Notice error>Staff access could not be confirmed. Refresh this page or sign in again.</Notice></div>;
   if (!allowedRoute || (location === '/settings/gym' && staff.data.role === 'trainer')) return <Redirect to="/dashboard" />;
-  return <div className="op-workspace">
-    <aside className="op-rail"><Link href="/dashboard" className="op-brand"><span className="op-brand-mark"><Dumbbell size={18} /></span><span><b>MyGym</b><small>FITNESS KE</small></span></Link>
+  return <div className={`op-workspace ${mobileNavOpen ? 'nav-open' : ''}`}>
+    {mobileNavOpen && <button className="op-nav-scrim" onClick={() => { setMobileNavOpen(false); mobileNavToggle.current?.focus(); }} aria-label="Close navigation menu" />}
+    <aside className="op-rail" id="operation-navigation"><Link href="/dashboard" className="op-brand" onClick={() => setMobileNavOpen(false)}><span className="op-brand-mark"><Dumbbell size={18} /></span><span><b>MyGym</b><small>FITNESS KE</small></span></Link>
       <div className="op-rail-caption">GYM OPERATIONS</div><nav>
-        <Link href="/dashboard" className="op-nav" data-testid="link-overview"><Gauge size={17} />Overview</Link>
+        <Link href="/dashboard" className="op-nav" data-testid="link-overview" onClick={() => setMobileNavOpen(false)}><Gauge size={17} />Overview</Link>
         {nav.map(([key, label, Icon]) => {
           const href = key === 'trainer-members' ? '/trainer/members' : `/${key}`;
-          return <Link key={key} href={href} className={`op-nav ${active === key ? 'current' : ''}`} data-testid={`link-${key}`}><Icon size={17} />{label}</Link>;
+          return <Link key={key} href={href} className={`op-nav ${active === key ? 'current' : ''}`} data-testid={`link-${key}`} onClick={() => setMobileNavOpen(false)}><Icon size={17} />{label}</Link>;
         })}
       </nav>
-      <div className="op-rail-bottom"><span className="op-avatar">{staff.data.name.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase()}</span><span><b>{staff.data.name}</b><small>{staff.data.role}</small></span>{staff.data.role === 'owner' && <Link href="/settings/gym" aria-label="Gym settings" className="op-settings" data-testid="link-operation-settings">Settings</Link>}</div>
+      <div className="op-rail-bottom"><span className="op-avatar">{staff.data.name.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase()}</span><span><b>{staff.data.name}</b><small>{staff.data.role}</small></span>{staff.data.role === 'owner' && <Link href="/settings/gym" aria-label="Gym settings" className="op-settings" data-testid="link-operation-settings" onClick={() => setMobileNavOpen(false)}>Settings</Link>}</div>
     </aside>
-    <main className="op-main"><div className="op-topline"><Link href="/dashboard" data-testid="link-back-overview"><ArrowLeft size={15} /> Overview</Link><span><i /> {staff.data.role} workspace</span></div><div className="op-content">{children}</div></main>
+    <main className="op-main"><div className="op-topline">
+      <button
+        ref={mobileNavToggle}
+        type="button"
+        className="op-menu-toggle"
+        aria-label={mobileNavOpen ? 'Close navigation menu' : 'Open navigation menu'}
+        aria-expanded={mobileNavOpen}
+        aria-controls="operation-navigation"
+        onClick={() => setMobileNavOpen((open) => !open)}
+      >{mobileNavOpen ? <X size={18} /> : <Menu size={18} />}</button>
+      <Link href="/dashboard" data-testid="link-back-overview"><ArrowLeft size={15} /> Overview</Link><span><i /> {staff.data.role} workspace</span>
+    </div><div className="op-content">{children}</div></main>
   </div>;
 }
 

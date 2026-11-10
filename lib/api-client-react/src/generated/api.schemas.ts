@@ -575,6 +575,14 @@ export interface ExpiringMembership {
   expiresOn: string;
   /** @minimum 0 */
   daysRemaining: number;
+  /** @nullable */
+  phone: string | null;
+}
+
+export interface RevenueDay {
+  day: string;
+  /** @minimum 0 */
+  amountKes: number;
 }
 
 export interface FitnessAssessmentHistoryItem {
@@ -648,10 +656,15 @@ export interface DashboardSummary {
   paymentsThisMonth?: number | null;
   membershipsExpiring: ExpiringMembership[];
   /** @nullable */
+  membershipsExpiringCount?: number | null;
+  /** @nullable */
+  expiredMembers?: number | null;
+  /** @nullable */
   inactiveMembers?: number | null;
   /** @nullable */
   checkInsToday?: number | null;
   attendanceTrend: AttendanceDay[];
+  revenueTrend: RevenueDay[];
   /** @nullable */
   staffCount?: number | null;
   /** @nullable */

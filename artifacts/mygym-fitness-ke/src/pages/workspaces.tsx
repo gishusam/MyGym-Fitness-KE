@@ -205,6 +205,21 @@ function StatCard({ label, value, note, Icon }: {
   return <article className="ws-stat"><span className="ws-stat-icon"><Icon size={18} /></span><span className="ws-stat-label">{label}</span><b>{value}</b><small>{note}</small></article>;
 }
 
+type RetentionItem = { memberId: string; memberNumber: string; name: string; signals: {code: string; label: string; detail: string}[] };
+type RetentionSummary = { atRiskCount: number; inactiveCount: number; expiringCount: number; signals: RetentionItem[] };
+
+function MemberRetentionPanel() {
+  const query = useQuery({queryKey:['owner-retention'], queryFn:()=>request<RetentionSummary>('/api/dashboard/retention'), staleTime:60000});
+  if (query.isLoading) return <section className="ws-panel"><LoadingPanel /></section>;
+  if (query.isError || !query.data) return <section className="ws-panel"><p className="ws-empty">Member follow-up indicators are unavailable.</p></section>;
+  const data = query.data;
+  return <section className="ws-panel m8-retention" aria-label="Member retention signals">
+    <div className="ws-panel-head"><div><span className="ws-eyebrow">MEMBER RETENTION</span><h2>Members who may need attention</h2><p>Rule-based signals from memberships and check-ins, not predictions.</p></div><Link href="/members" className="ws-text-link">Open members <ArrowRight size={15}/></Link></div>
+    <div className="m8-retention-stats"><div><b>{data.expiringCount}</b><small>Renewals due</small></div><div><b>{data.inactiveCount}</b><small>14+ days without visits</small></div><div><b>{data.atRiskCount}</b><small>Declining attendance</small></div></div>
+    {data.signals.length ? <div className="m8-retention-rows">{data.signals.slice(0,8).map(m=><div key={m.memberId} className="m8-retention-row"><div><strong>{m.name}</strong><small>{m.memberNumber}</small></div><div>{m.signals.map(s=><span key={s.code} title={s.detail} className="m8-signal">{s.label} · {s.detail}</span>)}</div></div>)}</div> : <p className="ws-empty">No members currently meet these follow-up rules.</p>}
+  </section>;
+}
+
 export function WorkspaceOverview({ staff }: { staff: CurrentStaff }) {
   const query = useQuery({
     queryKey: ['workspace-summary', staff.id],
@@ -252,6 +267,7 @@ export function WorkspaceOverview({ staff }: { staff: CurrentStaff }) {
     <div className={`ws-stat-grid ${staff.role === 'receptionist' ? 'is-frontdesk' : ''}`}>
       {stats.map(({ label, value, note, Icon }) => <StatCard key={label} label={label} value={value} note={note} Icon={Icon} />)}
     </div>
+    {staff.role === 'owner' && <MemberRetentionPanel />}
     {staff.role !== 'trainer' && <section className="ws-panel">
       <div className="ws-panel-head"><div><span className="ws-eyebrow">MEMBER FOLLOW-UP</span><h2>Memberships expiring soon</h2></div><Link className="ws-text-link" href="/subscriptions">Open subscriptions <ArrowRight size={15} /></Link></div>
       {summary.membershipsExpiring.length === 0

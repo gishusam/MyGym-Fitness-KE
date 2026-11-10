@@ -1371,3 +1371,28 @@
 .ws-workout-share .ws-program-actions { display: flex; flex-wrap: wrap; gap: 9px; margin: 12px 0; }
 .member-pdf-download { display: inline-flex; gap: 9px; align-items: center; background: #285d43; color: white; font-weight: 700; padding: 12px 16px; border-radius: 10px; margin-top: 16px; text-decoration: none; }
 .member-pdf-download:hover { background: #1e4833; color: white; }
+
+/* M8 landing + retention */
+.m8-feature-section{padding:74px 0 55px}
+.m8-section-head{max-width:650px;margin-bottom:28px}
+.m8-section-head h2,.m8-how h2{font-size:clamp(28px,4vw,47px);letter-spacing:-.045em;line-height:1.12;margin:14px 0;color:#25392e}
+.m8-section-head em{color:#2e714f;font-style:normal}
+.m8-section-head p{color:#697b70;line-height:1.7}
+.m8-feature-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.m8-feature-card{border:1px solid #dce6de;border-radius:18px;padding:26px;background:#fff}
+.m8-feature-card>span{display:inline-flex;color:#276849;background:#eef5ef;padding:12px;border-radius:12px}
+.m8-feature-card h3{font-size:19px;color:#273c30;margin:19px 0 7px}
+.m8-feature-card p{font-size:14px;line-height:1.65;color:#6d7c72;margin:0}
+.m8-how{padding:58px 0 90px}
+.m8-how>div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:27px 0}
+.m8-how article{padding:23px;background:#f2f6f2;border:1px solid #e1ebe2;border-radius:16px}
+.m8-how article b{color:#377452;font-size:13px}.m8-how article p{margin:10px 0 0;color:#293c30;font-weight:600}
+.m8-retention-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:15px 0 22px}
+.m8-retention-stats>div{padding:16px;border-radius:12px;background:#f3f7f4;border:1px solid #e1ebe4;display:flex;flex-direction:column;gap:4px}
+.m8-retention-stats b{font-size:25px;color:#285d43}.m8-retention-stats small{color:#68776e}
+.m8-retention-row{display:grid;grid-template-columns:minmax(140px,1fr) 2fr;gap:12px;padding:14px 0;border-top:1px solid #e7ede8;align-items:center}
+.m8-retention-row>div:first-child{display:flex;flex-direction:column;gap:4px}.m8-retention-row strong{font-size:14px;color:#293c30}.m8-retention-row small{color:#8a988d;font-size:12px}
+.m8-retention-row>div:last-child{display:flex;flex-wrap:wrap;gap:6px}
+.m8-signal{font-size:12px;background:#fff6e7;color:#795e32;border:1px solid #f0dfbc;border-radius:7px;padding:6px 8px}
+@media(max-width:780px){.m8-feature-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.m8-how>div{grid-template-columns:1fr}.m8-retention-stats{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.m8-feature-grid,.m8-retention-stats{grid-template-columns:1fr}.m8-feature-section{padding-top:40px}.m8-retention-row{grid-template-columns:1fr}}

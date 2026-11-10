@@ -133,8 +133,8 @@ function HomePage() {
           <section className="landing-hero wrap">
             <div className="hero-copy page-enter">
               <div className="eyebrow"><span className="eyebrow-line" /> SIMPLE GYM OPERATIONS</div>
-              <h1>More time for<br /><em>the people</em><br />who show up.</h1>
-              <p className="hero-description">A clear, dependable home for your gym team. Set up your business once, then keep the important details close at hand.</p>
+              <h1>Run your gym<br /><em>with clarity.</em></h1>
+              <p className="hero-description">Members, subscriptions, payments, attendance, workouts and events — one connected workspace for your whole team.</p>
               <div className="hero-actions">
                 <ButtonLink href="/sign-in">Sign in to your gym <ArrowRight size={17} /></ButtonLink>
                 <span className="secure-note"><ShieldCheck size={15} /> For authorised gym staff</span>
@@ -146,15 +146,29 @@ function HomePage() {
               <div className="art-orbit orbit-one" /><div className="art-orbit orbit-two" />
               <div className="art-label"><span className="label-mark" /> YOUR GYM, IN GOOD ORDER</div>
               <div className="preview-card">
-                <div className="preview-head"><div><span className="micro-label">WORKSPACE</span><h3>Gym overview</h3></div><span className="live-pill"><i /> Ready</span></div>
+                <div className="preview-head"><div><span className="micro-label">ILLUSTRATIVE PRODUCT PREVIEW</span><h3>Owner dashboard</h3></div><span className="live-pill"><i /> Demo</span></div>
                 <div className="preview-rule" />
-                <div className="preview-setting"><span className="preview-icon"><Settings2 size={16} /></span><div><b>Gym settings</b><small>Keep the essentials up to date</small></div><ChevronRight size={16} className="preview-chevron" /></div>
-                <div className="preview-setting"><span className="preview-icon warm"><Clock3 size={16} /></span><div><b>Access hours</b><small>Plan peak hours in a later step</small></div><span className="later-pill">LATER</span></div>
+                <div className="preview-setting"><span className="preview-icon"><UsersRound size={16} /></span><div><b>Active memberships</b><small>25 fictional demo members</small></div><b>25</b></div>
+                <div className="preview-setting"><span className="preview-icon warm"><Clock3 size={16} /></span><div><b>Renewals & follow-up</b><small>See members needing attention</small></div><span className="later-pill">LIVE</span></div>
                 <div className="preview-footer"><span><Wifi size={14} /> Secure staff access</span><span className="foot-arc" /></div>
               </div>
               <div className="art-stamp"><span>MG</span><small>EST. FOR<br />KENYA</small></div>
             </div>
           </section>
+          <section className="m8-feature-section wrap" id="features" aria-label="What MyGym can do">
+            <div className="m8-section-head"><span className="section-index">THE MYGYM EXPERIENCE</span><h2>Everything your gym needs,
+            <em> in one place.</em></h2><p>From your front desk to your coaching floor, keep your people and operations connected.</p></div>
+            <div className="m8-feature-grid">
+              {[
+                { Icon: Gauge, title:'Owner dashboard', desc:'See your gym performance: memberships, recorded revenue and attendance.' },
+                { Icon: Activity, title:'Member retention', desc:'Spot renewals, prolonged inactivity and declining visits before follow-ups are missed.' },
+                { Icon: QrCode, title:'Daily operations', desc:'Register members, record payments and check people in by QR.' },
+                { Icon: Dumbbell, title:'Fitness support', desc:'Review goals and assign trainer-approved workout programs.' },
+                { Icon: UsersRound, title:'Member experience', desc:'Share onboarding and workout links via WhatsApp and let members save their plans.' },
+              ].map(({Icon,title,desc})=><article key={title} className="m8-feature-card"><span><Icon size={20}/></span><h3>{title}</h3><p>{desc}</p></article>)}
+            </div>
+          </section>
+          <section className="m8-how wrap"><span className="section-index">HOW IT WORKS</span><h2>Simple from day one.</h2><div>{['Register and manage memberships','Record visits and payments','Help trainers deliver personalized programs'].map((s,i)=><article key={s}><b>0{i+1}</b><p>{s}</p></article>)}</div><Link className="button button-primary" href="/sign-in">Sign in to MyGym <ArrowRight size={16}/></Link></section>
           <section className="landing-bottom wrap">
             <div className="landing-bottom-lead"><span className="section-index">01 / THE STARTING POINT</span><h2>One steady place<br />to start from.</h2></div>
             <div className="landing-benefit"><div className="benefit-icon"><Fingerprint size={19} /></div><div><b>Staff-first access</b><p>Your team signs in securely and sees the right workspace for their role.</p></div></div>

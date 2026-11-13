@@ -128,3 +128,17 @@ def get_gym(gym_id: str, actor: str = Depends(require_platform_admin), db: Sessi
     if not gym:
         raise HTTPException(status_code=404, detail={"error": "Gym not found", "code": "gym_not_found"})
     return GymView.from_tenant(gym)
+
+
+@app.post("/api/platform/gyms/{gym_id}/provisioning-request", response_model=GymView)
+def request_provisioning(gym_id: str, actor: str = Depends(require_platform_admin), db: Session = Depends(platform_db)) -> GymView:
+    """Record an operator request. Does NOT create databases or launch processes."""
+    gym = db.get(GymTenant, gym_id)
+    if gym is None:
+        raise HTTPException(status_code=404, detail={"error": "Gym not found", "code": "gym_not_found"})
+    if gym.status not in {"pending_provisioning", "provision_failed"}:
+        raise HTTPException(status_code=409, detail={"error": "Gym cannot be provisioned in its current state", "code": "invalid_gym_state"})
+    db.add(PlatformAudit(actor_clerk_user_id=actor, gym_id=gym.id, event="provisioning_requested"))
+    db.commit()
+    db.refresh(gym)
+    return GymView.from_tenant(gym)

@@ -37,3 +37,28 @@ uv run pytest backend/tests/test_platform_admin.py -q
 - 9C: short-lived support sessions, explicit gym-approved scope, request correlation, strict read-only default, and full audit trails. **Do not add direct Clerk impersonation**.
 
 The registry does not represent a provisioned or functioning tenant until provisioning completes and its status is transitioned to `active` by a future service.
+
+## 9B — Operator-controlled provisioning
+
+This adds a controlled **request → provisioning → awaiting_owner** lifecycle.
+The `provisioning-request` API creates an audit event but **never** starts a database operation in the web process.
+
+1. Run `0002_provisioning_status.sql` on the platform DB (after migration 0001).
+2. Register a gym through the authenticated platform registry API.
+3. Prepare a **separate, pre-created, least-privileged** PostgreSQL tenant owner role. The operator connection needs `CREATEDB` and should be restricted to an administrator-maintained provisioning environment.
+4. Set `PLATFORM_DATABASE_URL` to the platform DB, `GYM_PROVISION_ADMIN_URL` to a PostgreSQL maintenance database connection with CREATEDB, `GYM_PROVISION_TENANT_URL` to the tenant owner's maintenance DB connection (same host/cluster), and `GYM_PROVISION_OWNER_ROLE` to that owner's PostgreSQL role identifier. **Never expose these secrets to the frontend.** Each gym must ultimately have its own restricted role and credentials; reusing a shared tenant role across customers is not safe for production.
+5. Run a dry run (does not change data):
+
+   ```sh
+   uv run python -m backend.platform.provisioning --gym-id <gym-uuid>
+   ```
+
+6. When ready, run the operator-only provisioner:
+
+   ```sh
+   uv run python -m backend.platform.provisioning --gym-id <gym-uuid> --apply
+   ```
+
+The command creates the `mygym_tenant_<slug>` database if absent, checks ownership on retry, applies the existing Alembic migrations using the tenant role, verifies essential tables, and updates the registry to `awaiting_owner`. It **never** creates mock Clerk users, impersonates an owner, automatically activates a gym or drops a database on failure. Failures move to `provision_failed` and can be retried after investigation.
+
+**Important limits before production:** PostgreSQL maintenance credentials and tenant isolation must be properly provisioned; an authenticated owner invitation/bootstrap and per-request routing are not yet built. Do not treat `awaiting_owner` as an activated or usable gym. The current CLI is intended for a carefully controlled local/operator environment, not an untrusted multi-user deployment or automated public provisioning.

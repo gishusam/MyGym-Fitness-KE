@@ -83,6 +83,7 @@ export * from './paymentPage';
 export * from './paymentStatus';
 export * from './paymentVerificationStatus';
 export * from './paymentVoidInput';
+export * from './revenueDay';
 export * from './searchEventMembersParams';
 export * from './staffCreateInput';
 export * from './staffCreateInputRole';

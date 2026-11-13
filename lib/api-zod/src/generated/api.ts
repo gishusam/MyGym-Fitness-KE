@@ -885,6 +885,8 @@ export const getDashboardSummaryResponseMembershipsExpiringItemDaysRemainingMin 
 
 export const getDashboardSummaryResponseAttendanceTrendItemCheckInsMin = 0;
 
+export const getDashboardSummaryResponseRevenueTrendItemAmountKesMin = 0;
+
 export const getDashboardSummaryResponseUpcomingEventsItemRegisteredCountMin = 0;
 
 export const getDashboardSummaryResponseUpcomingEventsItemRemainingSlotsMin = 0;
@@ -902,13 +904,20 @@ export const GetDashboardSummaryResponse = zod.object({
   "memberNumber": zod.string(),
   "fullName": zod.string(),
   "expiresOn": zod.coerce.date(),
-  "daysRemaining": zod.number().int().min(getDashboardSummaryResponseMembershipsExpiringItemDaysRemainingMin)
+  "daysRemaining": zod.number().int().min(getDashboardSummaryResponseMembershipsExpiringItemDaysRemainingMin),
+  "phone": zod.string().nullable()
 })),
+  "membershipsExpiringCount": zod.number().int().nullish(),
+  "expiredMembers": zod.number().int().nullish(),
   "inactiveMembers": zod.number().int().nullish(),
   "checkInsToday": zod.number().int().nullish(),
   "attendanceTrend": zod.array(zod.object({
   "day": zod.coerce.date(),
   "checkIns": zod.number().int().min(getDashboardSummaryResponseAttendanceTrendItemCheckInsMin)
+})),
+  "revenueTrend": zod.array(zod.object({
+  "day": zod.coerce.date(),
+  "amountKes": zod.number().int().min(getDashboardSummaryResponseRevenueTrendItemAmountKesMin)
 })),
   "staffCount": zod.number().int().nullish(),
   "trainerMemberCount": zod.number().int().nullish(),

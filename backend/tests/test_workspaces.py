@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from threading import Barrier
 from types import SimpleNamespace
+from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from fastapi.testclient import TestClient
@@ -21,9 +22,12 @@ from backend.app.models import (
     GymEvent,
     GymSettings,
     Member,
+    MembershipPlan,
     StaffRole,
     StaffUser,
+    Subscription,
 )
+from backend.app.models.payment import Payment, PaymentStatus
 
 NAIROBI = ZoneInfo("Africa/Nairobi")
 
@@ -353,6 +357,62 @@ def test_owner_dashboard_uses_real_payment_data_and_protects_last_owner(
     assert summary["activeMembers"] == 0
     assert summary["paymentsThisMonth"] == 0
     assert summary["revenueThisMonthKes"] is None
+    assert summary["membershipsExpiringCount"] == 0
+    assert summary["expiredMembers"] == 0
+    assert len(summary["revenueTrend"]) == datetime.now(NAIROBI).date().day
+    assert sum(day["amountKes"] for day in summary["revenueTrend"]) == 0
+
+    member = create_member(client, "0712345699")
+    member_id = UUID(member["id"])
+    today = datetime.now(NAIROBI).date()
+    plan = MembershipPlan(name="Dashboard Test Plan", monthly_price_kes=4200, is_active=True)
+    db.add(plan)
+    db.flush()
+    db.add(
+        Subscription(
+            member_id=member_id,
+            plan_id=plan.id,
+            plan_name=plan.name,
+            monthly_price_kes=plan.monthly_price_kes,
+            starts_on=today - timedelta(days=40),
+            expires_on=today - timedelta(days=1),
+            status="active",
+        )
+    )
+    db.commit()
+    assert client.get("/api/dashboard/summary").json()["expiredMembers"] == 1
+    db.add(
+        Subscription(
+            member_id=member_id,
+            plan_id=plan.id,
+            plan_name=plan.name,
+            monthly_price_kes=plan.monthly_price_kes,
+            starts_on=today,
+            expires_on=today + timedelta(days=3),
+            status="active",
+        )
+    )
+    paid_at = (datetime.now(NAIROBI) - timedelta(minutes=1)).astimezone(timezone.utc)
+    db.add(
+        Payment(
+            member_id=member_id,
+            amount_kes=4200,
+            method="cash",
+            status=PaymentStatus.RECORDED.value,
+            paid_at=paid_at,
+        )
+    )
+    db.commit()
+    updated_summary = client.get("/api/dashboard/summary").json()
+    today_revenue = next(
+        day for day in updated_summary["revenueTrend"]
+        if day["day"] == paid_at.astimezone(NAIROBI).date().isoformat()
+    )
+    assert updated_summary["revenueThisMonthKes"] == 4200
+    assert updated_summary["expiredMembers"] == 0
+    assert updated_summary["membershipsExpiringCount"] == 1
+    assert updated_summary["membershipsExpiring"][0]["phone"] == member["phone"]
+    assert today_revenue["amountKes"] == 4200
 
     rejected = client.patch(
         f"/api/staff/{owner.id}",
@@ -369,6 +429,12 @@ def test_owner_dashboard_uses_real_payment_data_and_protects_last_owner(
         f"/api/staff/{owner.id}",
         json={"role": "trainer"},
     ).status_code == 403
+    trainer = staff_factory(StaffRole.TRAINER)
+    set_staff(trainer)
+    trainer_summary = client.get("/api/dashboard/summary").json()
+    assert trainer_summary["membershipsExpiring"] == []
+    assert trainer_summary["expiredMembers"] is None
+    assert trainer_summary["revenueTrend"] == []
     app.dependency_overrides.clear()
 
 

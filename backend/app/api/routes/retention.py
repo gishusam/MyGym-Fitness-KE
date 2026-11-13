@@ -63,7 +63,8 @@ def retention_signals(
                 member_signals.append({'code': 'declining_visits', 'label': 'Declining visits', 'detail': f'{recent} visits in 14 days versus {baseline} in prior 28 days.'})
         if member_signals:
             items.append({'memberId': str(member.id), 'memberNumber': member.member_number,
-                          'name': member.full_name, 'signals': member_signals})
+                          'name': member.full_name, 'phone': member.phone,
+                          'signals': member_signals})
     items.sort(key=lambda row: (0 if any(s['code']=='renewal_due' for s in row['signals']) else 1, row['name']))
     return {'atRiskCount': declining_count, 'inactiveCount': inactive_count,
             'expiringCount': expiring_count, 'signals': items[:30]}

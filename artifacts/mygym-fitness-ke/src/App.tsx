@@ -20,6 +20,7 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
+import { PlatformAdminPage } from '@/pages/platform-admin';
 import { AttendancePage, MembersPage, PaymentsPage, PlansPage, SubscriptionsPage } from '@/pages/operations';
 import { EventsPage, StaffManagementPage, TrainerMembersPage, WorkoutsPage, WorkspaceOverview } from '@/pages/workspaces';
 import { MemberOnboardingPage } from '@/pages/member-onboarding';
@@ -592,6 +593,7 @@ function RoutedPages() {
     <Route path="/sign-up/*?" component={SignUpPage} />
     <Route path="/onboarding/:token">{(params) => <MemberOnboardingPage token={params.token} />}</Route>
     <Route path="/my-workout/:token">{(params) => <MemberWorkoutPage token={params.token} />}</Route>
+    <Route path="/platform"><Show when="signed-in"><PlatformAdminPage /></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></Route>
     <Route path="/dashboard"><Show when="signed-in"><StaffDashboard /></Show><Show when="signed-out"><Redirect to="/" /></Show></Route>
     <Route path="/settings/gym"><Show when="signed-in"><GymSettingsPage /></Show><Show when="signed-out"><Redirect to="/" /></Show></Route>
     <Route path="/members"><Show when="signed-in"><MembersPage /></Show><Show when="signed-out"><Redirect to="/" /></Show></Route>

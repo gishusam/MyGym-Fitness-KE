@@ -51,3 +51,26 @@ PORT = "8082"
 
 [services.production.health.startup]
 path = "/api/healthz"
+
+[[services]]
+localPort = 8083
+name = "MyGym Platform API"
+paths = ["/api/platform"]
+
+[services.development]
+run = "uv run uvicorn backend.platform.app:app --app-dir ../.. --host 0.0.0.0 --port $PORT"
+
+[services.production]
+
+[services.production.build]
+args = ["uv", "sync", "--no-dev"]
+
+[services.production.run]
+args = ["uv", "run", "uvicorn", "backend.platform.app:app", "--app-dir", "../..", "--host", "0.0.0.0", "--port", "8083"]
+
+[services.production.run.env]
+PORT = "8083"
+
+[services.production.health.startup]
+path = "/api/platform/healthz"
+kind = "web"

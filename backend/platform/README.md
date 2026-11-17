@@ -2,6 +2,8 @@
 
 This is a **separate, opt-in FastAPI application** for the SaaS operator. It does not alter the current gym API, or its database migrations and permissions.
 
+The API artifact routes `/api/platform/*` to this service on its own process and port. The gym API continues to serve the other `/api/*` routes. Configure the platform service's `PLATFORM_DATABASE_URL` and `PLATFORM_ADMIN_CLERK_IDS` server-side before using the console; without them, platform requests fail closed.
+
 ## Scope in this initial commit
 
 - Central **gym registry**: list, register, fetch gyms
@@ -17,6 +19,8 @@ This is a **separate, opt-in FastAPI application** for the SaaS operator. It doe
 3. Run `backend/platform/migrations/0001_platform_registry.sql` against the platform DB using your normal deployment/migration tooling. Do not execute it on a gym database.
 4. Set `PLATFORM_ADMIN_CLERK_IDS` to one or more specific verified Clerk `sub` values (comma-separated). Do not use a gym Owner role, an email address, or a wildcard.
 5. Deploy this service separately from the gym API with HTTPS, restricted origins, appropriate rate limits, and a separate service account.
+
+For local development, the API artifact starts this service on port `8083` and routes `/api/platform` to it. The service's health check is `/api/platform/healthz`. Keep the platform service's environment separate from the gym API service; in particular, do not put platform or provisioning credentials in frontend build variables.
 
 Local server command (after setting the environment variables):
 

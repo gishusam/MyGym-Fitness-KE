@@ -71,6 +71,10 @@ export default defineConfig({
     allowedHosts: true,
     
     proxy: {
+      '/api/platform': {
+        target: 'http://127.0.0.1:8083',
+        changeOrigin: false,
+      },
       '/api': {
         target: 'http://127.0.0.1:8082',
         changeOrigin: false,

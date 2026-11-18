@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -171,6 +172,9 @@ def test_provision_creates_isolated_role_and_sanitizes_migration_environment(
         "PLATFORM_CREDENTIAL_ENCRYPTION_KEYS",
         base64.urlsafe_b64encode(b"k" * 32).decode("ascii"),
     )
+    monkeypatch.setenv("CLERK_SECRET_KEY", "test-only-clerk-secret")
+    monkeypatch.setenv("PAYMENTS_SECRET_KEY", "test-only-payments-secret")
+    monkeypatch.setenv("UNRELATED_RUNTIME_VALUE", "test-only-value")
 
     statements = []
 
@@ -211,6 +215,12 @@ def test_provision_creates_isolated_role_and_sanitizes_migration_environment(
             return None
 
     migration_environment = {}
+    migration_working_directory = {}
+
+    def fake_subprocess_run(_command, *, cwd, env, check):
+        migration_environment.update(env)
+        migration_working_directory.update(path=cwd, exists=Path(cwd).exists())
+
     monkeypatch.setattr(
         psycopg,
         "connect",
@@ -218,7 +228,7 @@ def test_provision_creates_isolated_role_and_sanitizes_migration_environment(
     )
     monkeypatch.setattr(
         "backend.platform.provisioning.subprocess.run",
-        lambda _command, *, cwd, env, check: migration_environment.update(env),
+        fake_subprocess_run,
     )
     monkeypatch.setattr(
         "backend.platform.provisioning.create_engine",
@@ -237,20 +247,23 @@ def test_provision_creates_isolated_role_and_sanitizes_migration_environment(
             event.event for event in session.scalars(select(PlatformAudit)).all()
         ] == ["provisioning_started", "database_provisioned"]
 
-    if any(
-        key in migration_environment
-        for key in (
-            "PLATFORM_DATABASE_URL",
-            "PLATFORM_CREDENTIAL_ENCRYPTION_KEYS",
-            "PLATFORM_ADMIN_CLERK_IDS",
-            "GYM_SOURCE_DATABASE_URL",
-            "GYM_PROVISION_ADMIN_URL",
-            "GYM_PROVISION_TENANT_URL",
-            "GYM_PROVISION_OWNER_ROLE",
-        )
-    ):
-        pytest.fail("Provisioning credentials leaked into the migration subprocess")
+    if set(migration_environment) - {
+        "PATH",
+        "HOME",
+        "LANG",
+        "LC_ALL",
+        "TZ",
+        "TMPDIR",
+        "SSL_CERT_FILE",
+        "SSL_CERT_DIR",
+        "DATABASE_URL",
+    }:
+        pytest.fail("Unexpected environment variables reached the migration subprocess")
     if "DATABASE_URL" not in migration_environment:
         pytest.fail("Tenant database URL was not passed to the migration subprocess")
+    if not migration_working_directory.get("exists"):
+        pytest.fail("Migration subprocess was not given an isolated working directory")
+    if Path(migration_working_directory["path"], ".env").exists():
+        pytest.fail("Migration subprocess could reload a project .env file")
     assert statements
     engine.dispose()

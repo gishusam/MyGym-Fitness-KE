@@ -8,6 +8,7 @@ import re
 import secrets
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 from sqlalchemy import create_engine, select
@@ -141,24 +142,39 @@ def provision(gym_id: str, *, apply: bool = False) -> str:
                 if owner != role:
                     raise ValueError("Existing database has an unexpected owner; refusing to modify it")
 
-        env = os.environ.copy()
-        # Migration subprocesses need only the per-gym URL, never operator/platform credentials.
-        for key in (
-            "PLATFORM_DATABASE_URL",
-            "PLATFORM_CREDENTIAL_ENCRYPTION_KEYS",
-            "PLATFORM_ADMIN_CLERK_IDS",
-            "GYM_SOURCE_DATABASE_URL",
-            "GYM_PROVISION_ADMIN_URL",
-            "GYM_PROVISION_TENANT_URL",
-            "GYM_PROVISION_OWNER_ROLE",
-        ):
-            env.pop(key, None)
+        # Alembic gets only a small runtime allowlist and the tenant URL. Run it
+        # outside the project root so Pydantic cannot silently reload a .env file.
+        env = {
+            key: os.environ[key]
+            for key in (
+                "PATH",
+                "HOME",
+                "LANG",
+                "LC_ALL",
+                "TZ",
+                "TMPDIR",
+                "SSL_CERT_FILE",
+                "SSL_CERT_DIR",
+            )
+            if key in os.environ
+        }
         env["DATABASE_URL"] = migrated_url
         project_root = Path(__file__).resolve().parents[2]
-        subprocess.run(
-            [sys.executable, "-m", "alembic", "-c", "backend/alembic.ini", "upgrade", "head"],
-            cwd=project_root, env=env, check=True,
-        )
+        with tempfile.TemporaryDirectory(prefix="mygym-alembic-") as migration_cwd:
+            subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "alembic",
+                    "-c",
+                    str(project_root / "backend" / "alembic.ini"),
+                    "upgrade",
+                    "head",
+                ],
+                cwd=migration_cwd,
+                env=env,
+                check=True,
+            )
         # Verify the schema from the tenant's own login, not from the superuser.
         engine = create_engine(migrated_url, pool_pre_ping=True)
         try:

@@ -41,7 +41,7 @@ def get_session_factory() -> sessionmaker[Session]:
 def get_db(request: Request) -> Generator[Session, None, None]:
     try:
         from backend.app.db.tenant_sessions import resolve_tenant_session
-        session = resolve_tenant_session(request) or get_session_factory()()
+        session = resolve_tenant_session(request)
     except HTTPException:
         raise
 

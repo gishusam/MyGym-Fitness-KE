@@ -6,6 +6,7 @@ import {
   ArrowLeft, ArrowRight, CalendarDays, Check, ChevronLeft, ChevronRight, CircleAlert, Copy,
   Clock3, CreditCard, Dumbbell, Gauge, LoaderCircle, Menu, Pencil, Plus, QrCode, RefreshCw,
   MessageCircle, Search, ShieldCheck, UserCog, UserRound, UsersRound, Wallet, X,
+  Download, LayoutGrid, List, ArrowDownUp,
 } from 'lucide-react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import {
@@ -148,6 +149,41 @@ function Members() {
   const [welcomeCopied, setWelcomeCopied] = useState('');
   const [assessmentOpen, setAssessmentOpen] = useState(false);
   const [measurements, setMeasurements] = useState({weightKg:'',heightCm:'',bodyFatPercent:'',musclePercent:'',visceralFatLevel:''});
+// MYGYM MEMBERS DIRECTORY REDESIGN — display logic injected inside Members()
+  const [directoryView, setDirectoryView] = useState<'table' | 'cards'>('table');
+  const [directoryFilter, setDirectoryFilter] = useState<'all' | 'active' | 'expiring' | 'expired' | 'no_plan'>('all');
+  const [sortRecent, setSortRecent] = useState(true);
+  type DirectoryMember = { planName: string | null; expiresOn: string | null; subscriptionStatus: string; lastCheckIn: string | null; visits30d: number };
+  type DirectoryStats = { totalMembers: number; activeSubscriptions: number; visitors30d: number; newThisMonth: number; newPreviousMonth: number; checkInsToday: number; renewalsDue: number; planDistribution: {id:string;name:string;count:number;percentage:number}[]; memberDetails: Record<string, DirectoryMember> };
+  const pageMemberIds = query.data?.items.map(m => m.id).join(',') ?? '';
+  const insights = useQuery<DirectoryStats>({
+    queryKey: ['mygym-member-insights', pageMemberIds],
+    queryFn: () => customFetch<DirectoryStats>(`/api/members/directory-insights?memberIds=${encodeURIComponent(pageMemberIds)}`, {method:'GET', responseType:'json'}),
+    enabled: !!query.data,
+    staleTime: 30_000,
+  });
+  const stats = insights.data;
+  const memberDetails = stats?.memberDetails ?? {};
+  const filteredRows = [...(query.data?.items ?? [])].filter(m => {
+    const state = memberDetails[m.id]?.subscriptionStatus;
+    if (directoryFilter === 'all') return true;
+    return directoryFilter === 'active' ? state === 'active' || state === 'expiring' : state === directoryFilter;
+  }).sort((a,b) => sortRecent ? 0 : a.fullName.localeCompare(b.fullName));
+  const planStats = (stats?.planDistribution ?? []).filter(p => p.count > 0);
+  const maxPlanCount = Math.max(1, ...planStats.map(p=>p.count));
+  const registeredDiff = stats ? stats.newThisMonth - stats.newPreviousMonth : null;
+  function openMemberProfile(id:string){setSelected(id);setMode('profile');}
+  function memberStatus(m: {id:string;status:string}) {
+    return m.status === 'inactive' ? 'Inactive' : ({active:'Active',expiring:'Expiring',expired:'Expired',no_plan:'No plan',inactive:'Inactive'} as Record<string,string>)[memberDetails[m.id]?.subscriptionStatus] || '—';
+  }
+  function exportVisibleMembers() {
+    const rows = [['Member ID','Name','Phone','Member status','Plan','Expires on','Last check-in','Visits 30 days'], ...filteredRows.map(m=>[m.memberNumber,m.fullName,m.phone,m.status,memberDetails[m.id]?.planName||'',memberDetails[m.id]?.expiresOn||'',memberDetails[m.id]?.lastCheckIn||'',String(memberDetails[m.id]?.visits30d ?? '')])];
+    const contents = rows.map(row=>row.map(value=>`"${String(value).replaceAll('"','""')}"`).join(',')).join('\r\n');
+    const file = new Blob([contents],{type:'text/csv;charset=utf-8'});
+    const url = URL.createObjectURL(file);
+    const a=document.createElement('a');a.href=url;a.download=`mygym-members-page-${page}.csv`;a.click(); URL.revokeObjectURL(url);
+  }
+
   const resetForm = () => { setName(''); setPhone(''); setEmail(''); setFormError(''); setAssessmentOpen(false); setMeasurements({weightKg:'',heightCm:'',bodyFatPercent:'',musclePercent:'',visceralFatLevel:''}); };
   const resetWizard = () => {setWizardStep(0);setWizardPlanId('');setWizardStart(todayInNairobi());};
   const parsedWeight = Number(measurements.weightKg);
@@ -229,7 +265,7 @@ function Members() {
     } catch(error) {
       if(!createdId)setFormError(serverError(error,'Member could not be registered. Please check the details.'));
     } finally {
-      await client.invalidateQueries({queryKey:getListMembersQueryKey()});
+      await client.invalidateQueries({queryKey:getListMembersQueryKey()}); await client.invalidateQueries({queryKey:['mygym-member-insights']});
       await client.invalidateQueries({queryKey:getListSubscriptionsQueryKey()});
       setWizardSaving(false);
     }
@@ -250,8 +286,6 @@ function Members() {
     if (mode === 'edit') update.mutate({ memberId: selected, data }, opts); else create.mutate({ data }, opts);
   }
   return <>
-    <Heading eyebrow="MEMBER DIRECTORY" title="Members" detail="Find people quickly, keep their details accurate, and manage their access card."
-      action={<button className="op-button op-primary" onClick={() => { resetForm(); resetWizard(); setSelected(''); setMode('new'); }} data-testid="button-register-member"><Plus size={16} /> Register member</button>} />
     {success && <Notice>{success}</Notice>}
     {welcome && <section className="op-welcome-card" aria-label="Prepared WhatsApp welcome">
       <div className="op-welcome-heading"><span><MessageCircle size={18}/></span><div><b>WhatsApp welcome is ready</b><small>Prepared only — the receptionist must press Send in WhatsApp. MyGym does not track delivery.</small></div></div>
@@ -266,10 +300,32 @@ function Members() {
       {welcomeError&&<small className="op-error-inline" role="alert">{welcomeError}</small>}
       <details><summary>Preview message</summary><p>{welcome.message}</p></details>
     </section>}
-    <section className="op-panel"><div className="op-toolbar"><label className="op-search"><Search size={17} /><input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search name, number or phone" data-testid="input-member-search" /></label><span className="op-count" data-testid="text-member-total">{query.data?.total ?? '—'} members</span></div>
-    {query.isLoading ? <LoadingRows /> : query.error ? <Notice error>Member records could not be loaded. <button onClick={() => query.refetch()} data-testid="button-retry-members">Try again</button></Notice> : !query.data?.items.length ? <div className="op-empty"><UsersRound size={25} /><b>{search ? 'No matching members' : 'Your member list starts here'}</b><p>{search ? 'Try another name, member number or phone.' : 'Register a member to create their profile and QR access card.'}</p></div> :
-      <div className="op-table-wrap"><table className="op-table"><thead><tr><th>Member</th><th>Phone</th><th>Registered</th><th>Status</th><th /></tr></thead><tbody>{query.data.items.map((m) => <tr key={m.id} data-testid={`row-member-${m.id}`}><td><button className="op-person" onClick={() => { setSelected(m.id); setMode('profile'); }} data-testid={`button-profile-${m.id}`}><span className="op-initials">{m.initials}</span><span><b>{m.fullName}</b><small>{m.memberNumber}</small></span></button></td><td>{m.phone}</td><td>{date(m.registeredAt)}</td><td><Status value={m.status} /></td><td className="op-row-actions"><button className="op-icon-button" aria-label={`Edit ${m.fullName}`} onClick={() => openEdit(m.id)} data-testid={`button-edit-member-${m.id}`}><Pencil size={15} /></button><button className="op-text-button" onClick={() => { setSelected(m.id); setMode('profile'); }} data-testid={`button-view-member-${m.id}`}>View <ArrowRight size={14} /></button></td></tr>)}</tbody></table></div>}
-    <div className="op-pagination"><span>Page {page} of {Math.max(1, Math.ceil((query.data?.total || 0) / 10))}</span><div><button disabled={page <= 1} onClick={() => setPage(page - 1)} data-testid="button-members-previous"><ChevronLeft size={16} /> Previous</button><button disabled={page >= Math.ceil((query.data?.total || 0) / 10)} onClick={() => setPage(page + 1)} data-testid="button-members-next">Next <ChevronRight size={16} /></button></div></div></section>
+    <section className="mg-directory" aria-label="Members directory">
+      <div className="mg-directory-header">
+        <div><span className="mg-kicker">DIRECTORY HUB</span><h1>Members</h1><p><b>{stats?.totalMembers?.toLocaleString('en-KE') ?? '—'} total members</b> · {stats?.checkInsToday ?? '—'} check-ins today</p></div>
+        <div className="mg-dir-header-actions">
+          <div className="mg-dir-tabs" role="group" aria-label="Membership filters">
+            {([['all','All members'],['active','Active'],['expiring','Expiring'],['expired','Expired'],['no_plan','No plan']] as const).map(([value,label])=><button key={value} type="button" className={directoryFilter===value?'is-active':''} aria-pressed={directoryFilter===value} onClick={()=>setDirectoryFilter(value)}>{label}</button>)}
+          </div>
+          <button type="button" className="mg-dir-action" onClick={exportVisibleMembers} disabled={!filteredRows.length} title="Export members shown on this page"><Download size={15}/> Export page</button>
+          <button type="button" className="mg-dir-register" onClick={()=>{resetForm();resetWizard();setSelected('');setMode('new')}} data-testid="button-register-member"><Plus size={15}/> Register member</button>
+        </div>
+      </div>
+      <div className="mg-dir-search"><Search size={20}/><input value={search} onChange={e=>{setSearch(e.target.value);setPage(1)}} placeholder="Search member name, unique member ID, or phone number…" aria-label="Search members"/><span>{query.data?.total?.toLocaleString('en-KE') ?? '—'} RESULTS</span>{search&&<button onClick={()=>{setSearch('');setPage(1)}} aria-label="Clear search"><X size={15}/></button>}</div>
+      <div className="mg-analytics">
+        <article className="mg-feature-analytics">
+          <div className="mg-feature-top"><div><span className="mg-card-label">TOTAL MEMBERS</span><span className="mg-live-tag">FROM YOUR GYM</span><p>Registered gym community and attendance activity</p></div><span className="mg-feature-chip">{stats?.checkInsToday ?? '—'} check-ins today</span></div>
+          <div className="mg-feature-body"><div><strong>{stats?.totalMembers?.toLocaleString('en-KE') ?? '—'}</strong><span className="mg-feature-growth">{stats?.activeSubscriptions ?? '—'} with current subscriptions</span><small>{stats?.visitors30d ?? '—'} unique members checked in over the last 30 days</small></div><div className="mg-orbit" aria-hidden="true"><i/><i/><i/><i/><span><UsersRound size={21}/></span></div></div>
+          <div className="mg-feature-bottom"><div><span>MEMBERS ACTIVE IN LAST 30 DAYS</span><b>{stats && stats.totalMembers ? Math.round(stats.visitors30d/stats.totalMembers*100) : 0}%</b></div><div className="mg-progress"><i style={{width:`${stats?.totalMembers ? Math.min(100,Math.round(stats.visitors30d/stats.totalMembers*100)):0}%`}}/></div></div>
+        </article>
+        <article className="mg-plan-card"><div className="mg-card-label">USERS BY PLAN</div><p>Current memberships</p><div className="mg-plan-bubbles">{planStats.length?planStats.slice(0,5).map((plan,i)=><div key={plan.id} className={`mg-plan-bubble mg-plan-${i%5}`} style={{width:`${Math.max(69,Math.round(75+50*Math.sqrt(plan.count/maxPlanCount)))}px`,height:`${Math.max(69,Math.round(75+50*Math.sqrt(plan.count/maxPlanCount)))}px`}} title={`${plan.name}: ${plan.count} members`}><strong>{plan.count.toLocaleString('en-KE')}</strong><span>{plan.name}</span></div>):<span className="mg-muted">No membership data yet</span>}</div><div className="mg-plan-footer">Based on Membership Plans · {stats?.activeSubscriptions ?? '—'} current subscriptions</div></article>
+        <div className="mg-side-stats"><article className="mg-signup-card"><span className="mg-card-label">NEW THIS MONTH</span><strong>{stats?.newThisMonth ?? '—'}</strong><div className="mg-mini-spark" aria-hidden="true"><svg viewBox="0 0 126 36"><path d="M2 28 C18 30 27 18 40 21 S63 4 77 13 S100 32 124 5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/></svg></div><small>{registeredDiff===null?'—':registeredDiff>=0?`+${registeredDiff}`:registeredDiff} compared with last month</small></article><article className="mg-pending-card"><span className="mg-card-label">PENDING ACTIONS <Clock3 size={14}/></span><div><strong>{stats?.renewalsDue ?? '—'}<small>renewals due in 7 days</small></strong><strong>{stats?.checkInsToday ?? '—'}<small>check-ins today</small></strong></div><div className="mg-pending-meter"><i/></div></article></div>
+      </div>
+      <div className="mg-results-bar"><span>Showing <b>{filteredRows.length}</b> of {query.data?.total ?? 0} members · Page {page}</span><div className="mg-view-controls"><button type="button" aria-label="Table view" aria-pressed={directoryView==='table'} title="Table view" className={directoryView==='table'?'selected':''} onClick={()=>setDirectoryView('table')}><List size={17}/></button><button type="button" aria-label="Card view" aria-pressed={directoryView==='cards'} title="Card view" className={directoryView==='cards'?'selected':''} onClick={()=>setDirectoryView('cards')}><LayoutGrid size={17}/></button><button className="mg-sort" type="button" onClick={()=>setSortRecent(value=>!value)}><ArrowDownUp size={15}/>{sortRecent?'Recent':'Name'}</button></div></div>
+      {insights.isError&&<Notice error>Member analytics could not be loaded. The directory remains available.</Notice>}
+      {query.isLoading?<LoadingRows/>:query.error?<Notice error>Member records could not be loaded. <button onClick={()=>query.refetch()}>Try again</button></Notice>:!filteredRows.length?<div className="op-empty"><UsersRound size={25}/><b>No members in this view</b><p>{search?'Try another search.':'Change the filter or register a member.'}</p></div>:directoryView==='table'?<div className="op-table-wrap"><table className="op-table mg-members-table"><thead><tr><th>MEMBER NAME & ID</th><th>CONTACT</th><th>CURRENT PLAN</th><th>VALIDITY / EXPIRY</th><th>STATUS</th><th>USAGE (30D)</th><th>ACTIONS</th></tr></thead><tbody>{filteredRows.map(m=>{const info=memberDetails[m.id];return <tr key={m.id} data-testid={`row-member-${m.id}`}><td><button className="op-person" onClick={()=>openMemberProfile(m.id)} data-testid={`button-profile-${m.id}`}><span className="op-initials">{m.initials}</span><span><b>{m.fullName}</b><small>{m.memberNumber}</small></span></button></td><td>{m.phone}</td><td><span className="mg-plan-label">{info?.planName||'Not assigned'}</span></td><td>{info?.expiresOn?date(`${info.expiresOn}T12:00:00Z`):'—'}</td><td><span className={`mg-subscription-state mg-state-${info?.subscriptionStatus||'unknown'}`}>{memberStatus(m)}</span></td><td><div className="mg-usage"><b>{info?.visits30d??'—'} visits</b><small>{info?.lastCheckIn?`Last: ${date(info.lastCheckIn)}`:'No visits'}</small></div></td><td className="op-row-actions"><button className="op-icon-button" aria-label={`Edit ${m.fullName}`} onClick={()=>openEdit(m.id)} data-testid={`button-edit-member-${m.id}`}><Pencil size={15}/></button><button className="op-text-button" onClick={()=>openMemberProfile(m.id)} data-testid={`button-view-member-${m.id}`}>View <ArrowRight size={14}/></button></td></tr>})}</tbody></table></div>:<div className="mg-member-grid">{filteredRows.map(m=>{const info=memberDetails[m.id];return <article key={m.id} className="mg-member-tile"><div className="mg-tile-top"><span className="op-initials">{m.initials}</span><span className={`mg-subscription-state mg-state-${info?.subscriptionStatus||'unknown'}`}>{memberStatus(m)}</span></div><b>{m.fullName}</b><small>{m.memberNumber}</small><div className="mg-tile-plan"><span>{info?.planName||'Not assigned'}</span><span>Expires {info?.expiresOn?date(`${info.expiresOn}T12:00:00Z`):'—'}</span></div><span className="mg-tile-phone">{m.phone}</span><p>{info?.visits30d??'—'} check-ins in the last 30 days</p><div className="mg-tile-actions"><button type="button" className="op-icon-button" onClick={()=>openEdit(m.id)} aria-label={`Edit ${m.fullName}`}><Pencil size={15}/></button><button type="button" onClick={()=>openMemberProfile(m.id)} className="op-text-button">View profile <ArrowRight size={14}/></button></div></article>})}</div>}
+      <div className="op-pagination"><span>Page {page} of {Math.max(1,Math.ceil((query.data?.total||0)/10))}</span><div><button disabled={page<=1} onClick={()=>setPage(p=>p-1)}><ChevronLeft size={16}/> Previous</button><button disabled={page>=Math.ceil((query.data?.total||0)/10)} onClick={()=>setPage(p=>p+1)}>Next <ChevronRight size={16}/></button></div></div>
+    </section>
     {mode === 'edit' && <div className="op-overlay"><section className="op-dialog op-edit-member-dialog"><button className="op-close" onClick={() => setMode(null)} aria-label="Close" data-testid="button-close-member-form"><X size={18}/></button><div className="op-modal-kicker">MEMBER DETAILS</div><h2>Edit member</h2><p>Update the member’s contact information.</p><form className="op-form" onSubmit={submit}><label>Full name<input value={name} onChange={e=>setName(e.target.value)} required minLength={2} maxLength={160}/></label><label>Phone number<input value={phone} onChange={e=>setPhone(e.target.value)} required minLength={9} maxLength={20}/></label><label>Email <span className="op-optional">Optional</span><input type="email" value={email} onChange={e=>setEmail(e.target.value)}/></label>{formError && <Notice error>{formError}</Notice>}<div className="op-form-actions"><button type="button" className="op-button op-light" onClick={()=>setMode(null)}>Cancel</button><button className="op-button op-primary" disabled={update.isPending}>Save changes</button></div></form><MemberSubscriptionEditor memberId={selected}/></section></div>}
     {mode === 'new' && <div className="op-overlay op-wizard-overlay">
       <section className="op-dialog op-registration-wizard" role="dialog" aria-modal="true" aria-labelledby="op-registration-title">

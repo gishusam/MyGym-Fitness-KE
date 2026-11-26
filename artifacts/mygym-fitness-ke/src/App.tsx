@@ -6,12 +6,12 @@ import { shadcn } from '@clerk/themes';
 import {
   Activity, ArrowDownRight, ArrowRight, ArrowUpRight, Check, CheckCircle2, CreditCard,
   CalendarDays, ChevronRight, CircleHelp, ClipboardList, Clock3, Dumbbell, ExternalLink,
-  Fingerprint, Gauge, LoaderCircle, LogOut, MapPin, Menu, Settings2, ShieldCheck,
+  Search, Fingerprint, MessageCircle, CircleAlert, Gauge, LoaderCircle, LogOut, MapPin, Menu, Settings2, ShieldCheck,
   SlidersHorizontal, QrCode, Sparkles, UserCog, UsersRound, Wallet, Wifi, X, XCircle,
 } from 'lucide-react';
 import { Link, Redirect, Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import {
-  setAuthTokenGetter,
+  setAuthTokenGetter, customFetch,
   getGetCurrentStaffQueryKey, getGetGymSettingsQueryKey, getHealthCheckQueryKey,
   useBootstrapInitialOwner, useGetCurrentStaff, useGetGymSettings, useHealthCheck, useUpdateGymSettings,
 } from '@workspace/api-client-react';
@@ -20,6 +20,9 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
+import { NewGymSignupPage } from '@/pages/NewGymSignupPage';
+import { GymImportPage } from '@/pages/GymImportPage';
+import '@/pages/gym-import.css';
 import { PlatformAdminPage } from '@/pages/platform-admin';
 import { AttendancePage, MembersPage, PaymentsPage, PlansPage, SubscriptionsPage } from '@/pages/operations';
 import { EventsPage, StaffManagementPage, TrainerMembersPage, WorkoutsPage, WorkspaceOverview } from '@/pages/workspaces';
@@ -118,68 +121,75 @@ function ButtonLink({ href, children, variant = 'primary', className = '' }: {
   return <Link href={href} className={`button ${variant === 'subtle' ? 'button-subtle' : 'button-primary'} ${className}`}>{children}</Link>;
 }
 
+/* MYGYM_FICCA_LANDING_V1 */
 function HomePage() {
-  return (
-    <>
-      <Show when="signed-in"><Redirect to="/dashboard" /></Show>
-      <Show when="signed-out">
-        <main className="landing">
-          <header className="landing-nav wrap">
-            <Brand />
-            <div className="landing-nav-actions">
-              <span className="kenya-note"><span className="kenya-dot" /> Built for gyms in Kenya</span>
-              <ButtonLink href="/sign-in" variant="subtle">Staff sign in <ArrowRight size={16} /></ButtonLink>
-            </div>
-          </header>
-          <section className="landing-hero wrap">
-            <div className="hero-copy page-enter">
-              <div className="eyebrow"><span className="eyebrow-line" /> SIMPLE GYM OPERATIONS</div>
-              <h1>Run your gym<br /><em>with clarity.</em></h1>
-              <p className="hero-description">Members, subscriptions, payments, attendance, workouts and events — one connected workspace for your whole team.</p>
-              <div className="hero-actions">
-                <ButtonLink href="/sign-in">Sign in to your gym <ArrowRight size={17} /></ButtonLink>
-                <span className="secure-note"><ShieldCheck size={15} /> For authorised gym staff</span>
-              </div>
-              <div className="hero-proof"><div className="proof-line" /><span>Made for the rhythm of local gyms</span></div>
-            </div>
-            <div className="hero-art" aria-label="Gym operations preview">
-              <div className="art-wash" />
-              <div className="art-orbit orbit-one" /><div className="art-orbit orbit-two" />
-              <div className="art-label"><span className="label-mark" /> YOUR GYM, IN GOOD ORDER</div>
-              <div className="preview-card">
-                <div className="preview-head"><div><span className="micro-label">ILLUSTRATIVE PRODUCT PREVIEW</span><h3>Owner dashboard</h3></div><span className="live-pill"><i /> Demo</span></div>
-                <div className="preview-rule" />
-                <div className="preview-setting"><span className="preview-icon"><UsersRound size={16} /></span><div><b>Active memberships</b><small>25 fictional demo members</small></div><b>25</b></div>
-                <div className="preview-setting"><span className="preview-icon warm"><Clock3 size={16} /></span><div><b>Renewals & follow-up</b><small>See members needing attention</small></div><span className="later-pill">LIVE</span></div>
-                <div className="preview-footer"><span><Wifi size={14} /> Secure staff access</span><span className="foot-arc" /></div>
-              </div>
-              <div className="art-stamp"><span>MG</span><small>EST. FOR<br />KENYA</small></div>
-            </div>
-          </section>
-          <section className="m8-feature-section wrap" id="features" aria-label="What MyGym can do">
-            <div className="m8-section-head"><span className="section-index">THE MYGYM EXPERIENCE</span><h2>Everything your gym needs,
-            <em> in one place.</em></h2><p>From your front desk to your coaching floor, keep your people and operations connected.</p></div>
-            <div className="m8-feature-grid">
-              {[
-                { Icon: Gauge, title:'Owner dashboard', desc:'See your gym performance: memberships, recorded revenue and attendance.' },
-                { Icon: Activity, title:'Member retention', desc:'Spot renewals, prolonged inactivity and declining visits before follow-ups are missed.' },
-                { Icon: QrCode, title:'Daily operations', desc:'Register members, record payments and check people in by QR.' },
-                { Icon: Dumbbell, title:'Fitness support', desc:'Review goals and assign trainer-approved workout programs.' },
-                { Icon: UsersRound, title:'Member experience', desc:'Share onboarding and workout links via WhatsApp and let members save their plans.' },
-              ].map(({Icon,title,desc})=><article key={title} className="m8-feature-card"><span><Icon size={20}/></span><h3>{title}</h3><p>{desc}</p></article>)}
-            </div>
-          </section>
-          <section className="m8-how wrap"><span className="section-index">HOW IT WORKS</span><h2>Simple from day one.</h2><div>{['Register and manage memberships','Record visits and payments','Help trainers deliver personalized programs'].map((s,i)=><article key={s}><b>0{i+1}</b><p>{s}</p></article>)}</div><Link className="button button-primary" href="/sign-in">Sign in to MyGym <ArrowRight size={16}/></Link></section>
-          <section className="landing-bottom wrap">
-            <div className="landing-bottom-lead"><span className="section-index">01 / THE STARTING POINT</span><h2>One steady place<br />to start from.</h2></div>
-            <div className="landing-benefit"><div className="benefit-icon"><Fingerprint size={19} /></div><div><b>Staff-first access</b><p>Your team signs in securely and sees the right workspace for their role.</p></div></div>
-            <div className="landing-benefit"><div className="benefit-icon warm-icon"><SlidersHorizontal size={19} /></div><div><b>Practical setup</b><p>Set your gym name, local time zone and a few useful operating defaults.</p></div></div>
-            <div className="landing-footnote">MYGYM FITNESS KE <span>·</span> A SIMPLE FOUNDATION FOR YOUR GYM</div>
-          </section>
-        </main>
-      </Show>
-    </>
-  );
+  const [role, setRole] = useState<'owner' | 'receptionist' | 'trainer'>('owner');
+  const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
+  const [faq, setFaq] = useState(0);
+  const roleDetails = {
+    owner: { label: 'Owner dashboard', description: 'Track membership health, recorded payments, check-ins, and follow-up priorities.', stats: [['Members', 'Profiles'], ['Attendance', 'Visits'], ['Renewals', 'Due soon'], ['Revenue', 'Recorded']] },
+    receptionist: { label: 'Front desk', description: 'Register members, find subscriptions, record payments, and check people in.', stats: [['Members', 'Directory'], ['Check-ins', 'Today'], ['Payments', 'Ledger'], ['Plans', 'Access']] },
+    trainer: { label: 'Trainer workspace', description: 'Review member fitness goals, assessments, and assigned workout plans.', stats: [['Members', 'Coaching'], ['Goals', 'Reviewed'], ['Plans', 'Assigned'], ['Progress', 'Tracked']] },
+  };
+  const questions = [
+    ['Do my members need to install an app?', 'No. Members can use secure links to access their onboarding and workout information in a mobile browser. Staff can share supported links through WhatsApp.'],
+    ['What do I need to get started?', 'Create an account and complete your gym setup when your gym workspace and owner access have been provisioned. Configure your gym settings and membership plans before adding members.'],
+    ['Who sees what?', 'Owners manage the business and staff access. Receptionists handle front-desk operations. Trainers work with fitness assessments and workouts. Permissions are enforced by the backend.'],
+    ['How are M-Pesa payments handled?', 'Payments are currently recorded by staff. Automated M-Pesa confirmation and subscription renewals are planned, not yet live.'],
+    ['Can I run more than one branch?', 'MyGym is being extended to support separately managed gyms. Multi-gym provisioning and branch-level access are still under development.'],
+  ];
+  return <>
+    <Show when="signed-in"><Redirect to="/dashboard" /></Show>
+    <Show when="signed-out">
+      <main className="lp2" id="top">
+        <header className="lp2-nav lp2-wrap">
+          <Link href="/" className="lp2-brand" aria-label="MyGym home"><span className="lp2-brand-symbol">M</span><b>MyGym</b></Link>
+          <nav className="lp2-navlinks" aria-label="Landing navigation">
+            <a href="#product">Product</a><a href="#dashboards">Dashboards</a><a href="#how-it-works">How it works</a><a href="#pricing">Pricing</a><a href="#questions">Questions</a>
+          </nav>
+          <div className="lp2-nav-actions"><Link className="lp2-btn lp2-btn-outline" href="/sign-in">Login</Link><Link className="lp2-btn lp2-btn-mint" href="/get-started">Get started</Link></div>
+        </header>
+
+        <section className="lp2-hero lp2-wrap" aria-labelledby="lp2-hero-title">
+          <div className="lp2-hero-copy"><span className="lp2-bubble lp2-bubble-blue">Owner</span><h1 id="lp2-hero-title">Keep your whole gym organised, from check-in to renewal.</h1><p>MyGym brings memberships, recorded payments, attendance and coaching into one place. Owners, receptionists and trainers each get their own workspace.</p><div className="lp2-hero-actions"><Link href="/get-started" className="lp2-btn lp2-btn-mint lp2-btn-lg">Get started <ArrowRight size={16}/></Link><a href="#dashboards" className="lp2-btn lp2-btn-outline lp2-btn-lg">See the dashboards</a></div><div className="lp2-proof"><span><Check size={15}/> No member app required</span><span><Check size={15}/> Built for gyms in Kenya</span><span><Check size={15}/> Staff access by role</span></div></div>
+          <div className="lp2-hero-visual"><span className="lp2-bubble lp2-bubble-violet lp2-tag-front">Front desk</span><div className="lp2-checkin"><div className="lp2-preview-header"><span className="lp2-chip lp2-chip-green">Checked in</span><span>•••</span></div><h3>Morning session</h3><div className="lp2-checkin-people">{[['AK','Achieng Kamau'],['BO','Brian Otieno'],['WM','Wanjiku Mwangi']].map(([initial,name],i)=><div className="lp2-checkin-person" key={initial}><span className={`lp2-circle lp2-circle-${i}`}>{initial}</span><b>{name}</b><span className="lp2-qr-mark"><QrCode size={40} strokeWidth={1.6}/></span><small>QR member access</small></div>)}</div><div className="lp2-checkin-foot"><span className="lp2-mini-avatars"><i>FN</i><i>SK</i><i>LW</i></span><span>Front-desk attendance</span></div></div><div className="lp2-renewal"><span className="lp2-chip lp2-chip-yellow">Due in 3 days</span><h3>Faith's renewal</h3><p>Upcoming membership expiry. Staff can review the subscription and follow up.</p><span className="lp2-renewal-foot"><MessageCircle size={15}/> Follow-up needed</span></div><span className="lp2-bubble lp2-bubble-pink lp2-tag-trainer">Trainer</span></div>
+        </section>
+
+        <section className="lp2-roles lp2-wrap" id="product"><div className="lp2-section-intro"><h2>One platform for everyone <span>at the gym</span></h2><p>Each person signs in to the same gym and sees the part that is theirs.</p></div><div className="lp2-role-cards">{[
+          {icon:<Gauge size={31}/>,name:'Gym owners',desc:'Revenue, renewals and retention'},
+          {icon:<UsersRound size={31}/>,name:'Front desk',desc:'Check-ins, members and payments'},
+          {icon:<Dumbbell size={31}/>,name:'Trainers',desc:'Assessments and workout plans'},
+          {icon:<Activity size={31}/>,name:'Members',desc:'Secure links and fitness plans'},
+          {icon:<Settings2 size={31}/>,name:'Gym groups',desc:'Multi-gym management in development'},
+        ].map((x,i)=><article className="lp2-role-card" key={x.name}><span className={`lp2-role-icon lp2-role-icon-${i}`}>{x.icon}</span><h3>{x.name}</h3><p>{x.desc}</p></article>)}</div>
+          <div className="lp2-feature"><div className="lp2-feature-copy"><h2>A front desk that keeps the queue moving</h2><ul><li><Check size={16}/> Check members in by QR code or by name</li><li><Check size={16}/> Register members and assign plans</li><li><Check size={16}/> Record payments and review subscription expiry</li><li><Check size={16}/> Keep a clear history of staff operations</li></ul><Link href="/get-started" className="lp2-textlink">Explore MyGym <ArrowRight size={17}/></Link></div><div className="lp2-feature-screen"><div className="lp2-mini-rail"><b>● MyGym</b><span>Overview</span><span>Members</span><strong>Check-ins →</strong><span>Payments</span><span>Settings</span></div><div className="lp2-mini-main"><div className="lp2-mini-search"><Search size={15}/> Search name or phone</div><h3>Check-ins</h3><small>Member attendance overview</small>{[['AK','Achieng Kamau','Checked in'],['BO','Brian Otieno','Active'],['FN','Faith Njeri','Renewal due']].map(([ini,name,status],i)=><div className={`lp2-check-row ${i===0?'lp2-check-highlight':''}`} key={ini}><span className="lp2-circle">{ini}</span><b>{name}</b><small>{status}</small></div>)}</div></div></div>
+        </section>
+
+        <section className="lp2-comparison lp2-wrap"><div className="lp2-section-intro"><h2>Running a gym is more <span>than check-ins</span></h2><p>When daily operations live in different places, important work gets missed.</p></div><div className="lp2-compare-grid"><article className="lp2-compare-before"><h3><CircleAlert size={24}/> Without a system</h3>{['A paper register nobody can search','Renewals remembered by whoever is at the desk','Owner, desk and trainers keeping separate notes','More admin every time your gym grows'].map(x=><p key={x}><X size={16}/>{x}</p>)}</article><article className="lp2-compare-after"><h3><CheckCircle2 size={25}/> With MyGym</h3>{['Member, visit and payment records in one place','Upcoming expiries flagged for review','A separate workspace for each staff role','A foundation for multi-gym operations'].map(x=><p key={x}><Check size={16}/>{x}</p>)}</article></div></section>
+
+        <section className="lp2-dashboards" id="dashboards"><div className="lp2-wrap"><div className="lp2-section-intro"><h2>The right dashboard <span>for each role</span></h2><p>Pick a role to see what that person works with every day.</p></div><div className="lp2-tabs" role="tablist" aria-label="Dashboard role">{(['owner','receptionist','trainer'] as const).map(r=><button key={r} type="button" role="tab" aria-selected={role===r} className={role===r?'active':''} onClick={()=>setRole(r)}>{r==='owner'?'Owner':r==='receptionist'?'Receptionist':'Trainer'}</button>)}</div><p className="lp2-dashboard-desc">{roleDetails[role].description}</p><div className="lp2-dashboard-visual"><aside className="lp2-dashboard-rail"><b>m</b><span>⌂</span><span>♙</span><span>▱</span><span>⚙</span></aside><aside className="lp2-dashboard-menu"><strong>Dashboards</strong><span>{roleDetails[role].label}</span><span>Members</span><span>Subscriptions</span><span>Attendance</span><span>Workouts</span><span>Settings</span></aside><div className="lp2-dashboard-canvas"><div className="lp2-dashboard-top"><span><Search size={14}/> Search</span><b>MyGym workspace</b></div><h3>{roleDetails[role].label}</h3><p>Illustrative interface • No live account data</p><div className="lp2-dashboard-statgrid">{roleDetails[role].stats.map(([k,v],i)=><div key={k}><span className={`lp2-stat-dot lp2-stat-dot-${i}`}/><small>{k}</small><b>{v}</b></div>)}</div><div className="lp2-dashboard-bottom"><article><h4>Membership overview</h4><div className="lp2-linegraph"><svg viewBox="0 0 460 150" preserveAspectRatio="none"><path d="M0 115 C60 104 80 80 132 84 S226 50 270 55 S375 23 460 20" fill="none" stroke="#6252DC" strokeWidth="4" strokeLinecap="round"/><path d="M0 138 C100 135 115 121 210 116 S350 100 460 90" fill="none" stroke="#22B87A" strokeWidth="3" strokeDasharray="7 6"/></svg></div></article><article><h4>Needs attention</h4><b>Renewals</b><div className="lp2-attention-bars"><i/><i/><i/></div><p>Upcoming expiry · Attendance follow-up</p></article></div></div></div></div></section>
+
+        <section className="lp2-journey lp2-wrap" id="how-it-works"><div className="lp2-steps">{[['01','Register','Member profile'],['02','Subscribe','Membership and payment'],['03','Check in','QR or staff entry'],['04','Train','Workout support'],['05','Retain','Renewal follow-up']].map(([num,title,desc],i)=><div className="lp2-journey-step" key={num} style={{marginLeft:`${i*10}%`}}><span>{num}</span><div><b>{title}</b><small>{desc}</small></div><ArrowRight size={17}/></div>)}</div><div className="lp2-journey-copy"><h2>From sign-up to a lasting membership</h2><p>The same member record moves through all five stages, so reception, owners and trainers never type the same thing twice.</p><Link href="/get-started" className="lp2-btn lp2-btn-mint lp2-btn-lg">Get started <ArrowRight size={16}/></Link></div></section>
+
+        <section className="lp2-mobile"><div className="lp2-wrap"><div className="lp2-mobile-head"><h2>Coaching and membership, <span>on the member's phone</span></h2><p>Members can open secure onboarding and workout links in their browser. There's no extra app to install.</p></div><div className="lp2-mobile-display"><div className="lp2-mobile-cardstack"><article><ClipboardList size={25}/><div><b>Fitness onboarding</b><p>Goals, experience and preferred workout days.</p></div></article><article><ShieldCheck size={26}/><div><b>Trainer review</b><p>Review and approve suggested training plans.</p></div></article></div><div className="lp2-phone"><div className="lp2-phone-island"/><small>Good morning</small><h3>Achieng</h3><div className="lp2-phone-pass"><QrCode size={53}/><div><b>Membership</b><span>Your secure gym pass</span></div></div><div className="lp2-phone-workout"><b>Today's workout</b><span>Week 2</span>{['Back squat','Bench press','Plank'].map((x,i)=><p key={x}>{x}<small>{i===2?'3 × 45 sec':'4 × 8'}</small></p>)}</div><div className="lp2-phone-note">Your workout plan is ready.</div></div><div className="lp2-mobile-cardstack"><article><Gauge size={26}/><div><b>Progress tracking</b><p>Assessments and reassessments in one history.</p></div></article><article><MessageCircle size={26}/><div><b>Easy sharing</b><p>Secure workout links and WhatsApp click-to-chat.</p></div></article></div></div></div></section>
+
+        <section className="lp2-insights lp2-wrap"><div><h2>See the numbers, and who needs attention</h2><p>Clear figures and follow-up rules you can read, so nothing is left to guesswork.</p><div className="lp2-insight-metrics">{[['Members','Directory'],['Renewals','Due soon'],['Attendance','Last 30 days'],['Follow-ups','At risk']].map(([k,v])=><article key={k}><b>{v}</b><small>{k}</small></article>)}</div></div><div className="lp2-insight-tasks">{[['Renewal due','Review subscriptions before they expire','Subscription'],['No visits in 14 days','Check in with the member','Attendance'],['Declining attendance','Review recent activity','Retention']].map(([h,d,tag],i)=><article key={h}><span className={`lp2-task-icon lp2-task-${i}`}><Clock3 size={21}/></span><div><b>{h}</b><small>{d}</small></div><span className="lp2-task-tag">{tag}</span></article>)}</div></section>
+
+        <section className="lp2-groups lp2-wrap"><div><span className="lp2-chip lp2-chip-yellow">In development</span><h2>One control centre <span>for several gyms</span></h2><p>Built towards an overview for gym groups, while each gym keeps its own records and access controls.</p><ul><li><Check size={16}/> Isolated member records for each gym</li><li><Check size={16}/> Owner assignment and gym activation workflows</li><li><Check size={16}/> Audited support access planned</li></ul></div><div className="lp2-groups-preview"><div className="lp2-groups-head"><b>All gyms</b><span>Illustration</span></div><div className="lp2-mini-search"><Search size={14}/> Search gyms</div>{[['M','MyGym Fitness KE','Existing gym'],['D','DemoFit Studio','Demo environment'],['N','New gym','Setup required']].map(([initial,name,desc])=><div className="lp2-gym-row" key={name}><span>{initial}</span><div><b>{name}</b><small>{desc}</small></div></div>)}</div></section>
+
+        <section className="lp2-pricing lp2-wrap" id="pricing"><div className="lp2-section-intro"><h2>Plans for your gym</h2><p>Platform subscription pricing is being finalised. Membership prices such as Peak and Off-Peak are set by each gym.</p></div><div className="lp2-tabs lp2-billing" role="tablist" aria-label="Billing cycle"><button type="button" role="tab" aria-selected={billing==='monthly'} className={billing==='monthly'?'active':''} onClick={()=>setBilling('monthly')}>Monthly</button><button type="button" role="tab" aria-selected={billing==='yearly'} className={billing==='yearly'?'active':''} onClick={()=>setBilling('yearly')}>Yearly</button></div><p className="lp2-billing-note">{billing==='monthly'?'Monthly subscription rates will be announced.':'Annual subscription rates will be announced.'}</p><div className="lp2-pricing-grid">{[
+          {name:'Starter',desc:'For a gym getting organised',items:['Member profiles and plans','QR and front-desk check-ins','Subscription expiry tracking','Owner and receptionist access']},
+          {name:'Growth',desc:'For a growing gym team',items:['Everything in Starter','Fitness assessment workflows','Trainer workspace and workouts','Member retention insights']},
+          {name:'Multi-gym',desc:'Under development',items:['Separate gym databases','Gym registry and activation','Platform administration','Audited support tooling (planned)']},
+        ].map((plan,i)=><article key={plan.name} className={i===1?'lp2-plan-featured':''}><div><h3>{plan.name}</h3><span>{i===2?'In development':'Pricing soon'}</span></div><p>{plan.desc}</p><ul>{plan.items.map(x=><li key={x}><Check size={15}/>{x}</li>)}</ul><Link className={`lp2-btn ${i===1?'lp2-btn-dark':'lp2-btn-outline'}`} href="/get-started">Explore setup <ArrowRight size={15}/></Link></article>)}</div></section>
+
+        <section className="lp2-faq lp2-wrap" id="questions"><div><h2>Questions <span>gym owners ask</span></h2><p>Want to explore the product? Start with a secure account and we'll guide you through available setup options.</p><Link href="/get-started" className="lp2-btn lp2-btn-outline">Get started <ArrowRight size={15}/></Link></div><div className="lp2-faq-list">{questions.map(([q,a],i)=><article key={q} className={faq===i?'open':''}><button type="button" aria-expanded={faq===i} aria-controls={`lp2-faq-answer-${i}`} onClick={()=>setFaq(faq===i?-1:i)}>{q}<span>{faq===i?'×':'+'}</span></button>{faq===i&&<p id={`lp2-faq-answer-${i}`}>{a}</p>}</article>)}</div></section>
+
+        <section className="lp2-final lp2-wrap"><div><h2>Less admin.<br/>More gym.</h2><p>Bring your gym's operations together and set up a workspace that grows with your team.</p><div><Link href="/get-started" className="lp2-btn lp2-btn-dark lp2-btn-lg">Get started <ArrowRight size={15}/></Link><Link href="/sign-in" className="lp2-btn lp2-btn-outline lp2-btn-lg">Already a user? Login</Link></div></div></section>
+        <footer className="lp2-footer lp2-wrap"><Link href="/" className="lp2-brand"><span className="lp2-brand-symbol">M</span><b>MyGym</b></Link><nav><a href="#product">Product</a><a href="#dashboards">Dashboards</a><a href="#how-it-works">How it works</a><a href="#pricing">Pricing</a><a href="#questions">Questions</a></nav><span>MyGym Fitness KE · Built for gyms in Kenya.</span></footer>
+      </main>
+    </Show>
+  </>;
 }
 
 function AppShell({ staff, children }: { staff: CurrentStaff; children: ReactNode }) {
@@ -511,6 +521,29 @@ function PendingPanel({ staff }: { staff?: CurrentStaff }) {
   const client = useQueryClient();
   const [, setLocation] = useLocation();
   const [bootstrapError, setBootstrapError] = useState('');
+  // MYGYM_AUTO_SIGNUP_RETURNING_OWNER_V1
+  useEffect(() => {
+    let cancelled = false;
+    customSignupOwner();
+    async function customSignupOwner() {
+      try {
+        // Reuse the existing auth-aware API client and its token getter.
+        const signup = await customFetch<{id:string; status:string} | null>(
+          '/api/platform/signup/me', {responseType:'json'});
+        if (cancelled || !signup) return;
+        if (signup.status === 'active') {
+          document.cookie = `mygym_gym=${encodeURIComponent(signup.id)}; Path=/api; SameSite=Lax`;
+          await client.invalidateQueries({queryKey:getGetCurrentStaffQueryKey()});
+          if (!cancelled) setLocation('/setup');
+        } else if (!cancelled) {
+          setLocation('/setup/new-gym');
+        }
+      } catch {
+        // Staff joining an existing gym should retain the access-pending flow.
+      }
+    }
+    return () => {cancelled = true;};
+  }, [client, setLocation]);
   const bootstrapOwner = useBootstrapInitialOwner({
     mutation: {
       onSuccess: async () => {
@@ -542,6 +575,7 @@ function PendingPanel({ staff }: { staff?: CurrentStaff }) {
         <div className="pending-steps"><span className="pending-step-number">01</span><span><b>Ask your gym owner</b><small>Share the email address you used to sign in.</small></span><ArrowDownRight size={16} /></div>
         <div className="pending-steps"><span className="pending-step-number">02</span><span><b>Come back here</b><small>Once access is assigned, sign in again to continue.</small></span><CheckCircle2 size={16} /></div>
         {staff?.email && <div className="pending-email"><span>Signed in as</span><b>{staff.email}</b></div>}
+        <div className="ngs-pending-entry" style={{padding:"17px",border:"1px solid #cce5d5",borderRadius:12,background:"#f1faf4",margin:"18px 0"}}><b>Opening a new gym?</b><p>Create your own gym workspace instead of requesting access to an existing one.</p><Link href="/setup/new-gym" className="button button-primary" data-testid="link-create-new-gym">Register your gym <ArrowRight size={15}/></Link></div>
         <div className="bootstrap-owner">
           <b>Setting up a new gym?</b>
           <p>If your account matches the gym’s configured first-owner email and no staff accounts exist, you can securely initialise the owner account here.</p>
@@ -559,11 +593,48 @@ function PendingPanel({ staff }: { staff?: CurrentStaff }) {
 }
 
 function SignInPage() {
-  return <main className="auth-page"><div className="auth-backdrop" /><div className="auth-aside"><Brand /><div><span className="eyebrow"><span className="eyebrow-line" /> FOR KENYAN GYM TEAMS</span><h1>A good gym<br />runs on <em>good people.</em></h1><p>Your staff workspace, ready when you are.</p><div className="auth-aside-foot"><ShieldCheck size={16} /> Secure access for authorised staff</div></div></div><div className="auth-form-area"><Link href="/" className="auth-home-link" data-testid="link-auth-home"><ArrowRight size={15} /> Back to MyGym</Link><SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} /></div></main>;
+  return <main className="auth-page"><div className="auth-backdrop" /><div className="auth-aside"><Brand /><div><span className="eyebrow"><span className="eyebrow-line" /> FOR KENYAN GYM TEAMS</span><h1>A good gym<br />runs on <em>good people.</em></h1><p>Your staff workspace, ready when you are.</p><div className="auth-aside-foot"><ShieldCheck size={16} /> Secure access for authorised staff</div></div></div><div className="auth-form-area"><Link href="/" className="auth-home-link" data-testid="link-auth-home"><ArrowRight size={15} /> Back to MyGym</Link><SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} forceRedirectUrl={`${basePath}/dashboard`} /></div></main>;
 }
 
 function SignUpPage() {
-  return <main className="auth-page"><div className="auth-backdrop" /><div className="auth-aside"><Brand /><div><span className="eyebrow"><span className="eyebrow-line" /> JOIN YOUR GYM TEAM</span><h1>Your next shift<br />starts with <em>a welcome.</em></h1><p>Create an account to get started. Your gym owner will assign your staff access.</p><div className="auth-aside-foot"><ShieldCheck size={16} /> A secure space for gym staff</div></div></div><div className="auth-form-area"><Link href="/" className="auth-home-link" data-testid="link-auth-home"><ArrowRight size={15} /> Back to MyGym</Link><SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} /></div></main>;
+  return <main className="auth-page"><div className="auth-backdrop" /><div className="auth-aside"><Brand /><div><span className="eyebrow"><span className="eyebrow-line" /> JOIN YOUR GYM TEAM</span><h1>Your next shift<br />starts with <em>a welcome.</em></h1><p>Create an account to get started. Your gym owner will assign your staff access.</p><div className="auth-aside-foot"><ShieldCheck size={16} /> A secure space for gym staff</div></div></div><div className="auth-form-area"><Link href="/" className="auth-home-link" data-testid="link-auth-home"><ArrowRight size={15} /> Back to MyGym</Link><SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} forceRedirectUrl={`${basePath}/setup`} /></div></main>;
+}
+
+
+// MYGYM_ONBOARDING_CONNECTION_V1
+function GetStartedPage() {
+  return <main className="mg-onboard-page">
+    <header className="mg-onboard-nav"><Brand/><Link href="/sign-in" className="button button-light">Sign in <ArrowRight size={16}/></Link></header>
+    <section className="mg-onboard-intro"><span className="small-cap">WELCOME TO MYGYM</span><h1>How will you use <em>MyGym?</em></h1><p>Choose the right path. Your account and permissions stay protected by Clerk and your gym administrator.</p></section>
+    <div className="mg-onboard-options">
+      <article className="mg-onboard-option"><span className="mg-onboard-icon"><Dumbbell size={23}/></span><h2>I'm setting up a gym</h2><p>Create your account, then configure your gym when the platform administrator has provisioned your gym and assigned you as its owner.</p><Link href="/sign-up" className="button button-primary">Create owner account <ArrowRight size={17}/></Link></article>
+      <article className="mg-onboard-option"><span className="mg-onboard-icon"><UsersRound size={23}/></span><h2>I'm joining a gym team</h2><p>Create a staff account and ask the gym owner to grant Receptionist or Trainer access. You won't see another gym's records.</p><Link href="/sign-up" className="button button-light">Create staff account <ArrowRight size={17}/></Link></article>
+    </div>
+    <p className="mg-onboard-note"><ShieldCheck size={15}/> Creating an account does not create a gym or grant owner permissions.</p>
+  </main>;
+}
+
+function GymSetupHub() {
+  const staff = useGetCurrentStaff({query:{queryKey:getGetCurrentStaffQueryKey()}});
+  const settings = useGetGymSettings({query:{queryKey:getGetGymSettingsQueryKey(),enabled:staff.data?.role==='owner'}});
+  if (staff.isLoading) return <LoadingPage/>;
+  if (isUnauthorized(staff.error)) return <SessionExpired/>;
+  if (isForbidden(staff.error)) return <PendingPanel/>;
+  if (staff.error || !staff.data) return <main className="centered-state"><Notice title="We couldn't verify your gym access" detail="Please try again. No gym setup has been changed." action={<button className="text-action" onClick={()=>staff.refetch()}>Retry <ArrowRight size={14}/></button>}/></main>;
+  if (staff.data.role!=='owner') return <Redirect to="/dashboard"/>;
+  if (settings.isLoading) return <LoadingPage/>;
+  if (isUnauthorized(settings.error)) return <SessionExpired/>;
+  const gymReady=Boolean(settings.data?.gymName?.trim() && settings.data?.timezone);
+  return <AppShell staff={staff.data}>
+    <div className="mg-setup-heading"><span className="small-cap">GETTING STARTED</span><h1>Make MyGym yours.</h1><p>Complete the essentials using your existing gym settings and membership-plan tools. You can return here any time.</p></div>
+    {settings.error && <div className="mg-setup-warning" role="alert">Gym settings couldn't be loaded. Check your connection before continuing.</div>}
+    <div className="mg-setup-steps">
+      <article className="mg-setup-step"><span className="mg-setup-number">01</span><div><span className="small-cap">GYM PROFILE</span><h2>Name and operating preferences</h2><p>Set your gym name, timezone and attendance defaults.</p><span className={`mg-setup-state ${gymReady?'done':''}`}>{gymReady?'Configured':'Review setup'}</span></div><Link href="/settings/gym" className="button button-light">{gymReady?'Review settings':'Set up gym'} <ArrowRight size={16}/></Link></article>
+      <article className="mg-setup-step"><span className="mg-setup-number">02</span><div><span className="small-cap">MEMBERSHIPS</span><h2>Define your membership plans</h2><p>Configure Peak, Off-Peak or other plans and their access windows. Plans are gym-specific.</p></div><Link href="/membership-plans" className="button button-light">Manage plans <ArrowRight size={16}/></Link></article>
+      <article className="mg-setup-step"><span className="mg-setup-number">03</span><div><span className="small-cap">TEAM & MEMBERS</span><h2>Bring your team and members in</h2><p>Upload existing member records and subscriptions from CSV or Excel. Invite staff when ready.</p></div><Link href="/setup/import" className="button button-light">Import members <ArrowRight size={16}/></Link></article>
+    </div>
+    <div className="mg-setup-footer"><span><ShieldCheck size={16}/> Owner-only setup. Changes are saved by the existing MyGym APIs.</span><Link href="/dashboard" className="button button-primary">Go to dashboard <ArrowRight size={17}/></Link></div>
+  </AppShell>;
 }
 
 function RoutedErrorBoundary({ children }: { children: ReactNode }) {
@@ -589,6 +660,9 @@ function ClerkQueryCacheInvalidator() {
 function RoutedPages() {
   return <RoutedErrorBoundary><Switch>
     <Route path="/" component={HomePage} />
+    <Route path="/get-started" component={GetStartedPage} />
+    <Route path="/setup/import"><Show when="signed-in"><GymImportPage /></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></Route>
+    <Route path="/setup"><Show when="signed-in"><GymSetupHub /></Show><Show when="signed-out"><Redirect to="/sign-up" /></Show></Route>
     <Route path="/sign-in/*?" component={SignInPage} />
     <Route path="/sign-up/*?" component={SignUpPage} />
     <Route path="/onboarding/:token">{(params) => <MemberOnboardingPage token={params.token} />}</Route>
@@ -605,6 +679,7 @@ function RoutedPages() {
     <Route path="/workouts"><Show when="signed-in"><WorkoutsPage /></Show><Show when="signed-out"><Redirect to="/" /></Show></Route>
     <Route path="/events"><Show when="signed-in"><EventsPage /></Show><Show when="signed-out"><Redirect to="/" /></Show></Route>
     <Route path="/staff"><Show when="signed-in"><StaffManagementPage /></Show><Show when="signed-out"><Redirect to="/" /></Show></Route>
+    <Route path="/setup/new-gym"><Show when="signed-in"><NewGymSignupPage /></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></Route>
     <Route path="/access-pending"><Show when="signed-in"><AccessPendingPage /></Show><Show when="signed-out"><Redirect to="/" /></Show></Route>
     <Route component={NotFound} />
   </Switch></RoutedErrorBoundary>;

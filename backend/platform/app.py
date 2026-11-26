@@ -201,3 +201,7 @@ def verify_and_activate_gym(
         db.commit()
         db.refresh(gym)
     return GymView.from_tenant(gym)
+
+
+from backend.platform.self_signup import router as self_signup_router
+app.include_router(self_signup_router)

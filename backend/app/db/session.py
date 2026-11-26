@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Generator
 from functools import lru_cache
 
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -38,9 +38,10 @@ def get_session_factory() -> sessionmaker[Session]:
     return sessionmaker(bind=get_engine(), autoflush=False, expire_on_commit=False)
 
 
-def get_db() -> Generator[Session, None, None]:
+def get_db(request: Request) -> Generator[Session, None, None]:
     try:
-        session = get_session_factory()()
+        from backend.app.db.tenant_sessions import resolve_tenant_session
+        session = resolve_tenant_session(request) or get_session_factory()()
     except HTTPException:
         raise
 

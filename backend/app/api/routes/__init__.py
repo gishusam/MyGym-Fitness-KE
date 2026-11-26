@@ -1,9 +1,11 @@
 from fastapi import APIRouter
 
 from backend.app.api.routes.gym_settings import router as gym_settings_router
+from backend.app.api.routes.gym_import import router as gym_import_router
 from backend.app.api.routes.events import router as events_router
 from backend.app.api.routes.health import router as health_router
 from backend.app.api.routes.retention import router as retention_router
+from backend.app.api.routes.member_directory_insights import router as member_directory_router
 from backend.app.api.routes.operations import router as operations_router
 from backend.app.api.routes.onboarding import router as onboarding_router
 from backend.app.api.routes.member_workout_access import router as member_workout_access_router
@@ -15,8 +17,10 @@ api_router = APIRouter()
 api_router.include_router(health_router)
 api_router.include_router(staff_router)
 api_router.include_router(gym_settings_router)
+api_router.include_router(gym_import_router)
 api_router.include_router(workspaces_router)
 api_router.include_router(retention_router)
+api_router.include_router(member_directory_router)
 api_router.include_router(operations_router)
 api_router.include_router(onboarding_router)
 api_router.include_router(member_workout_access_router)

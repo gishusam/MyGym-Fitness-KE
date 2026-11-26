@@ -596,6 +596,47 @@ function SignInPage() {
   return <main className="auth-page"><div className="auth-backdrop" /><div className="auth-aside"><Brand /><div><span className="eyebrow"><span className="eyebrow-line" /> FOR KENYAN GYM TEAMS</span><h1>A good gym<br />runs on <em>good people.</em></h1><p>Your staff workspace, ready when you are.</p><div className="auth-aside-foot"><ShieldCheck size={16} /> Secure access for authorised staff</div></div></div><div className="auth-form-area"><Link href="/" className="auth-home-link" data-testid="link-auth-home"><ArrowRight size={15} /> Back to MyGym</Link><SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} forceRedirectUrl={`${basePath}/dashboard`} /></div></main>;
 }
 
+
+function PlatformSignInPage() {
+  return (
+    <>
+      <Show when="signed-in">
+        <Redirect to="/platform" />
+      </Show>
+      <Show when="signed-out">
+        <main className="auth-page">
+          <div className="auth-backdrop" />
+          <div className="auth-aside">
+            <Brand />
+            <div>
+              <span className="eyebrow">
+                <span className="eyebrow-line" />
+                PLATFORM ADMINISTRATION
+              </span>
+              <h1>One platform.<br /><em>Every gym.</em></h1>
+              <p>Secure administration for the MyGym platform.</p>
+              <div className="auth-aside-foot">
+                <ShieldCheck size={16} />
+                Restricted to authorised platform administrators
+              </div>
+            </div>
+          </div>
+          <div className="auth-form-area">
+            <Link href="/" className="auth-home-link">
+              Back to MyGym
+            </Link>
+            <SignIn
+              routing="path"
+              path={`${basePath}/platform/sign-in`}
+              forceRedirectUrl={`${basePath}/platform`}
+            />
+          </div>
+        </main>
+      </Show>
+    </>
+  );
+}
+
 function SignUpPage() {
   return <main className="auth-page"><div className="auth-backdrop" /><div className="auth-aside"><Brand /><div><span className="eyebrow"><span className="eyebrow-line" /> JOIN YOUR GYM TEAM</span><h1>Your next shift<br />starts with <em>a welcome.</em></h1><p>Create an account to get started. Your gym owner will assign your staff access.</p><div className="auth-aside-foot"><ShieldCheck size={16} /> A secure space for gym staff</div></div></div><div className="auth-form-area"><Link href="/" className="auth-home-link" data-testid="link-auth-home"><ArrowRight size={15} /> Back to MyGym</Link><SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} forceRedirectUrl={`${basePath}/setup`} /></div></main>;
 }
@@ -663,11 +704,12 @@ function RoutedPages() {
     <Route path="/get-started" component={GetStartedPage} />
     <Route path="/setup/import"><Show when="signed-in"><GymImportPage /></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></Route>
     <Route path="/setup"><Show when="signed-in"><GymSetupHub /></Show><Show when="signed-out"><Redirect to="/sign-up" /></Show></Route>
+    <Route path="/platform/sign-in/*?" component={PlatformSignInPage} />
     <Route path="/sign-in/*?" component={SignInPage} />
     <Route path="/sign-up/*?" component={SignUpPage} />
     <Route path="/onboarding/:token">{(params) => <MemberOnboardingPage token={params.token} />}</Route>
     <Route path="/my-workout/:token">{(params) => <MemberWorkoutPage token={params.token} />}</Route>
-    <Route path="/platform"><Show when="signed-in"><PlatformAdminPage /></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></Route>
+    <Route path="/platform"><Show when="signed-in"><PlatformAdminPage /></Show><Show when="signed-out"><Redirect to="/platform/sign-in" /></Show></Route>
     <Route path="/dashboard"><Show when="signed-in"><StaffDashboard /></Show><Show when="signed-out"><Redirect to="/" /></Show></Route>
     <Route path="/settings/gym"><Show when="signed-in"><GymSettingsPage /></Show><Show when="signed-out"><Redirect to="/" /></Show></Route>
     <Route path="/members"><Show when="signed-in"><MembersPage /></Show><Show when="signed-out"><Redirect to="/" /></Show></Route>

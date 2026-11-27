@@ -161,6 +161,7 @@ class MemberSummary(ApiModel):
 class MemberDetail(MemberSummary):
     qr_token: str
     onboarding_token: str | None = None
+    gym_id: str | None = None
     latest_assessment: FitnessAssessmentResponse | None = None
 
 

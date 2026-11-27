@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Generator
 from functools import lru_cache
+import re
 
 from fastapi import HTTPException, Request
 from sqlalchemy import create_engine
@@ -40,8 +41,9 @@ def get_session_factory() -> sessionmaker[Session]:
 
 def get_db(request: Request) -> Generator[Session, None, None]:
     try:
-        from backend.app.db.tenant_sessions import resolve_tenant_session
-        session = resolve_tenant_session(request)
+        from backend.app.db.tenant_sessions import resolve_tenant_session, resolve_public_tenant_session
+        is_public_link = re.fullmatch(r"/api/public/(?:onboarding/[^/]+|workout/[^/]+(?:/pdf)?)", request.url.path)
+        session = resolve_public_tenant_session(request) if is_public_link else resolve_tenant_session(request)
     except HTTPException:
         raise
 

@@ -87,7 +87,7 @@ def create_workout_share_link(assignment_id: UUID, _staff: StaffUser = Depends(r
     raw = secrets.token_urlsafe(32)
     session.add(MemberWorkoutLink(id=uuid4(), assignment_id=assignment_id, token_hash=hashlib.sha256(raw.encode()).hexdigest(), expires_at=now + LINK_LIFETIME))
     session.commit()
-    return {'assignmentId': str(assignment.id), 'token': raw, 'memberName': member.full_name, 'phone': member.phone, 'programName': program.name, 'daysPerWeek': program.recommended_days_per_week, 'sessionMinutes': program.expected_session_minutes, 'expiresAt': (now + LINK_LIFETIME).isoformat()}
+    return {'assignmentId': str(assignment.id), 'token': raw, 'gymId': session.info.get('gym_id'), 'memberName': member.full_name, 'phone': member.phone, 'programName': program.name, 'daysPerWeek': program.recommended_days_per_week, 'sessionMinutes': program.expected_session_minutes, 'expiresAt': (now + LINK_LIFETIME).isoformat()}
 
 
 @router.post('/workout-assignments/{assignment_id}/share-link/revoke', operation_id='revokeWorkoutShareLink')

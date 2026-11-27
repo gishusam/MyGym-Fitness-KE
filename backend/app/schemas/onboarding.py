@@ -49,6 +49,7 @@ class MemberOnboardingInput(ApiModel):
 class OnboardingLinkResponse(ApiModel):
     token: str
     expires_at: datetime
+    gym_id: str | None = None
 
 
 class OnboardingRevocationResponse(ApiModel):

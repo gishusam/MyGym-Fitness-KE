@@ -468,6 +468,7 @@ def create_member(
     session.refresh(member)
     detail = _member_detail_with_fitness(session, member)
     detail.onboarding_token = onboarding_token
+    detail.gym_id = session.info.get("gym_id")
     return detail
 
 

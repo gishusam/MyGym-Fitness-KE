@@ -16,9 +16,11 @@ type Workout = {
 };
 
 export function MemberWorkoutPage({ token }: { token: string }) {
-  const base = `/api/public/workout/${encodeURIComponent(token)}`;
+  const gym = new URLSearchParams(window.location.search).get('gym') ?? '';
+  const base = `/api/public/workout/${encodeURIComponent(token)}?gym=${encodeURIComponent(gym)}`;
+  const pdf = `/api/public/workout/${encodeURIComponent(token)}/pdf?gym=${encodeURIComponent(gym)}`;
   const query = useQuery({
-    queryKey: ['member-workout', token],
+    queryKey: ['member-workout', token, gym],
     queryFn: async () => {
       const response = await fetch(base, { cache: 'no-store' });
       if (!response.ok) {
@@ -48,7 +50,7 @@ export function MemberWorkoutPage({ token }: { token: string }) {
             <span><Dumbbell size={15}/> {workout.daysPerWeek} days/week</span>
             <span><Clock3 size={15}/> About {workout.sessionMinutes} minutes/session</span>
           </div>
-          <a className="member-pdf-download" href={`${base}/pdf`} download="mygym-workout.pdf"><Download size={17}/> Download workout PDF</a>
+          <a className="member-pdf-download" href={pdf} download="mygym-workout.pdf"><Download size={17}/> Download workout PDF</a>
         </section>
         <section className="member-results">
           <article className="member-program-card">

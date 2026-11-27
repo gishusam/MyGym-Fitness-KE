@@ -108,11 +108,13 @@ function BeginnerGuidance() {
 
 export function MemberOnboardingPage({ token }: { token: string }) {
   const client = useQueryClient();
+  const gym = new URLSearchParams(window.location.search).get('gym') ?? '';
+  const publicPath = `/api/public/onboarding/${encodeURIComponent(token)}?gym=${encodeURIComponent(gym)}`;
   const [form, setForm] = useState<Questionnaire>(emptyForm);
   const [editing, setEditing] = useState(false);
   const query = useQuery({
-    queryKey: ['public-member-onboarding', token],
-    queryFn: () => request<OnboardingView>(`/api/public/onboarding/${encodeURIComponent(token)}`),
+    queryKey: ['public-member-onboarding', token, gym],
+    queryFn: () => request<OnboardingView>(publicPath),
     retry: false,
   });
   useEffect(() => {
@@ -121,11 +123,11 @@ export function MemberOnboardingPage({ token }: { token: string }) {
 
   const submit = useMutation({
     mutationFn: () => request<OnboardingView>(
-      `/api/public/onboarding/${encodeURIComponent(token)}`,
+      publicPath,
       { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(form) },
     ),
     onSuccess: async (view) => {
-      client.setQueryData(['public-member-onboarding', token], view);
+      client.setQueryData(['public-member-onboarding', token, gym], view);
       setEditing(false);
     },
   });

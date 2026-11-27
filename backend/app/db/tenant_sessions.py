@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import os
 import re
+from uuid import UUID
 from functools import lru_cache
 
 from fastapi import HTTPException, Request
@@ -100,6 +101,7 @@ def resolve_tenant_session(request: Request) -> Session:
             staff = session.scalar(select(StaffUser).where(StaffUser.clerk_user_id == user_id))
             if staff is None or staff.status != StaffStatus.ACTIVE.value:
                 _reject("gym_access_denied", "You do not have access to this gym")
+            session.info["gym_id"] = tenant_id
             return session
         except BaseException:
             session.close()
@@ -108,3 +110,39 @@ def resolve_tenant_session(request: Request) -> Session:
         raise
     except Exception:
         raise HTTPException(503, detail={"code": "gym_connection_unavailable", "error": "Unable to connect to the selected gym"}) from None
+
+
+
+def resolve_public_tenant_session(request: Request) -> Session:
+    """Resolve one registered active gym for a public bearer-token link.
+
+    The query gym UUID is an untrusted routing hint. Authorization happens
+    when the public endpoint validates the opaque token in that one database.
+    Never scan other tenants or fall back to the development database.
+    """
+    gym_id = request.query_params.get("gym", "")
+    try:
+        if str(UUID(gym_id)) != gym_id:
+            raise ValueError("noncanonical gym ID")
+    except (ValueError, TypeError, AttributeError):
+        raise HTTPException(404, detail={"code": "public_link_unavailable", "error": "Link unavailable"}) from None
+
+    from backend.platform.app import GymTenant, platform_session_factory
+    try:
+        with platform_session_factory()() as registry:
+            gym = registry.get(GymTenant, gym_id)
+            if gym is None or gym.status != "active" or not gym.database_ref:
+                raise HTTPException(404, detail={"code": "public_link_unavailable", "error": "Link unavailable"})
+            if gym.environment_kind == "customer":
+                factory = tenant_factory(gym.database_ref)
+            elif gym.environment_kind in _EXISTING and gym.database_ref == _EXISTING[gym.environment_kind]:
+                factory = existing_factory(gym.database_ref)
+            else:
+                raise HTTPException(404, detail={"code": "public_link_unavailable", "error": "Link unavailable"})
+        session = factory()
+        session.info["gym_id"] = gym_id
+        return session
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(503, detail={"code": "gym_connection_unavailable", "error": "Link temporarily unavailable"}) from None

@@ -238,7 +238,7 @@ def create_member_onboarding_link(
         raise _not_found()
     token, expires_at = issue_member_onboarding_token(session, member)
     session.commit()
-    return OnboardingLinkResponse(token=token, expires_at=expires_at)
+    return OnboardingLinkResponse(token=token, expires_at=expires_at, gym_id=session.info.get("gym_id"))
 
 
 @router.post(

@@ -610,13 +610,13 @@ const blankExercise = (): ExerciseForm => ({
 // MYGYM_WORKOUT_SHARE_V1
 // A link is created after approval; sending through WhatsApp still requires a human click.
 type WorkoutShare = {
-  assignmentId: string; token: string; memberName: string; phone: string; programName: string;
+  assignmentId: string; token: string; gymId: string; memberName: string; phone: string; programName: string;
   daysPerWeek: number; sessionMinutes: number; expiresAt: string;
 };
 function WorkoutShareCard({ share, onRevoke }: { share: WorkoutShare; onRevoke: () => Promise<void> }) {
   const [copied, setCopied] = useState('');
   const base = import.meta.env.BASE_URL.replace(/\/$/, '');
-  const link = `${window.location.origin}${base}/my-workout/${encodeURIComponent(share.token)}`;
+  const link = share.gymId ? `${window.location.origin}${base}/my-workout/${encodeURIComponent(share.token)}?gym=${encodeURIComponent(share.gymId)}` : "";
   const digits = share.phone.replace(/\D/g, '').replace(/^0/, '254');
   const firstName = share.memberName.split(' ')[0];
   const message = `Hi ${firstName}! 💪\n\nYour MyGym workout is ready. Your trainer has approved *${share.programName}* (${share.daysPerWeek} days per week, approximately ${share.sessionMinutes} minutes per session).\n\nView and download your workout here:\n${link}\n\nOur trainers are available at the gym to guide you through the exercises. See you soon!`;

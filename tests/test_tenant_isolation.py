@@ -36,7 +36,7 @@ def setup(monkeypatch):
         def get(self, model, gym_id): return gyms.get(gym_id)
 
     class GymSession:
-        def __init__(self, name): self.name = name
+        def __init__(self, name): self.name = name; self.info = {}
         def scalar(self, query):
             # Evaluate the subject genuinely used by the SQLAlchemy WHERE clause.
             params = query.compile().params

@@ -28,10 +28,10 @@ const time = (value?: string | null) => value ? new Intl.DateTimeFormat('en-KE',
 const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const todayInNairobi = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Nairobi', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 type WelcomeDraft = { memberId: string; link: string; message: string; whatsappUrl: string };
-function welcomeDraft(memberId: string, name: string, phone: string, token: string): WelcomeDraft {
+function welcomeDraft(memberId: string, name: string, phone: string, token: string, gymId: string): WelcomeDraft {
   const firstName = name.trim().split(/\s+/)[0] || 'there';
   const base = import.meta.env.BASE_URL.replace(/\/$/, '');
-  const link = `${window.location.origin}${base}/onboarding/${encodeURIComponent(token)}`;
+  const link = `${window.location.origin}${base}/onboarding/${encodeURIComponent(token)}?gym=${encodeURIComponent(gymId)}`;
   const message = `Hi ${firstName}! 👋 Welcome to MyGym Fitness KE.\n\nWe'd love to help you get started. Complete your fitness profile using the secure link below and we'll recommend a workout that matches your goals and availability.\n\n${link}\n\nOur trainers will be around to help you get started and stay consistent. 💪`;
   let digits = phone.replace(/\D/g, '');
   if (digits.startsWith('0')) digits = `254${digits.slice(1)}`;
@@ -193,10 +193,11 @@ function Members() {
   async function prepareWelcome(memberId: string, memberName: string, memberPhone: string) {
     setWelcomeBusy(true); setWelcomeError(''); setWelcomeCopied('');
     try {
-      const issued = await customFetch<{ token: string }>(`/api/members/${encodeURIComponent(memberId)}/onboarding-link`, {
+      const issued = await customFetch<{ token: string; gymId?: string }>(`/api/members/${encodeURIComponent(memberId)}/onboarding-link`, {
         method: 'POST', responseType: 'json',
       });
-      setWelcome(welcomeDraft(memberId, memberName, memberPhone, issued.token));
+      if (!issued.gymId) throw new Error("Missing gym context. Reopen your gym workspace and retry.");
+      setWelcome(welcomeDraft(memberId, memberName, memberPhone, issued.token, issued.gymId));
       setSuccess('A fresh secure onboarding link is ready. Staff must send the message in WhatsApp.');
     } catch (error) {
       setWelcomeError(serverError(error, 'A new onboarding link could not be prepared.'));
@@ -254,7 +255,7 @@ function Members() {
     try {
       const created=await create.mutateAsync({data:memberData});
       createdId=created.id;
-      if(created.onboardingToken) setWelcome(welcomeDraft(created.id, name, phone, created.onboardingToken));
+      if(created.onboardingToken && (created as typeof created & {gymId?: string}).gymId) setWelcome(welcomeDraft(created.id, name, phone, created.onboardingToken, (created as typeof created & {gymId: string}).gymId));
       else setWelcome(null);
       if(wizardPlanId){
         try {await wizardSubscription.mutateAsync({memberId:created.id,data:{planId:wizardPlanId,startsOn:wizardStart}});}
@@ -282,7 +283,7 @@ function Members() {
       initialAssessment: fields.length ? (assessment as {weightKg?:number;heightCm?:number;bodyFatPercent?:number;musclePercent?:number;visceralFatLevel?:number}) : null,
     } : { fullName: name.trim(), phone: phone.trim(), email: email.trim() || null };
 
-    const opts = { onSuccess: async (created: { id: string; fullName: string; phone: string; onboardingToken?: string | null }) => { await client.invalidateQueries({ queryKey: getListMembersQueryKey() }); if (selected) await client.invalidateQueries({ queryKey: getGetMemberDetailQueryKey(selected) }); setMode(null); resetForm(); if(mode==='new'&&created.onboardingToken)setWelcome(welcomeDraft(created.id,created.fullName,created.phone,created.onboardingToken)); setSuccess(mode === 'edit' ? 'Member details updated.' : 'Member registered. Prepare the WhatsApp welcome below.'); }, onError: (error: unknown) => setFormError(serverError(error, 'Could not save this member. Check the details and try again.')) };
+    const opts = { onSuccess: async (created: { id: string; fullName: string; phone: string; onboardingToken?: string | null; gymId?: string | null }) => { await client.invalidateQueries({ queryKey: getListMembersQueryKey() }); if (selected) await client.invalidateQueries({ queryKey: getGetMemberDetailQueryKey(selected) }); setMode(null); resetForm(); if(mode==='new'&&created.onboardingToken&&created.gymId)setWelcome(welcomeDraft(created.id,created.fullName,created.phone,created.onboardingToken,created.gymId)); setSuccess(mode === 'edit' ? 'Member details updated.' : 'Member registered. Prepare the WhatsApp welcome below.'); }, onError: (error: unknown) => setFormError(serverError(error, 'Could not save this member. Check the details and try again.')) };
     if (mode === 'edit') update.mutate({ memberId: selected, data }, opts); else create.mutate({ data }, opts);
   }
   return <>

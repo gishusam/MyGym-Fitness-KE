@@ -204,4 +204,6 @@ def verify_and_activate_gym(
 
 
 from backend.platform.self_signup import router as self_signup_router
+from backend.platform.workspaces import router as workspace_discovery_router
 app.include_router(self_signup_router)
+app.include_router(workspace_discovery_router)

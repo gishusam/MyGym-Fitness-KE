@@ -193,6 +193,7 @@ function HomePage() {
 }
 
 function AppShell({ staff, children }: { staff: CurrentStaff; children: ReactNode }) {
+  const client = useQueryClient();
   const { signOut } = useClerk();
   const [location] = useLocation();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -257,7 +258,7 @@ function AppShell({ staff, children }: { staff: CurrentStaff; children: ReactNod
       <aside className={`sidebar ${mobileNavOpen ? 'is-open' : ''}`} id="app-navigation">
         <div className="sidebar-brand"><Brand /></div>
         <div className="workspace-label">WORKSPACE</div>
-        <div className="gym-switcher"><span className="gym-avatar"><Dumbbell size={18} /></span><span><b>Gym operations</b><small>Staff workspace</small></span><ChevronRight size={15} /></div>
+        <Link href="/access-pending" className="gym-switcher" onClick={() => setMobileNavOpen(false)}><span className="gym-avatar"><Dumbbell size={18} /></span><span><b>Gym operations</b><small>Switch gym</small></span><ChevronRight size={15} /></Link>
         <div className="nav-label">YOUR SPACE</div>
         <nav className="side-nav" aria-label="Main navigation">
           {navigation.map(({ href, label, Icon }) => (
@@ -496,15 +497,56 @@ function NumberField({ id, label, detail, value, min, max, suffix, onChange, dis
   return <div className="number-row"><div><label className="field-label" htmlFor={id}>{label}</label><p className="number-detail">{detail}</p></div><div className="number-entry"><input id={id} type="number" min={min} max={max} step="1" value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled} data-testid={testId} /><span>{suffix}</span></div></div>;
 }
 
-function AccessPendingPage() {
-  const staffQuery = useGetCurrentStaff({ query: { queryKey: getGetCurrentStaffQueryKey() } });
-  if (staffQuery.isLoading) return <LoadingPage />;
-  if (isUnauthorized(staffQuery.error)) return <SessionExpired />;
-  if (staffQuery.data && !isForbidden(staffQuery.error)) {
-    if (staffQuery.data.status === 'active') return <Redirect to="/dashboard" />;
-    return <AppShell staff={staffQuery.data}><Notice title="Your staff access is inactive" detail="Please ask your gym owner to reactivate your account before using the workspace." /></AppShell>;
+type AvailableGym = { id: string; name: string; role: string; environment_kind: string };
+
+function WorkspaceSelection() {
+  const client = useQueryClient();
+  const [, navigate] = useLocation();
+  const [gyms, setGyms] = useState<AvailableGym[] | null>(null);
+  const [error, setError] = useState('');
+  const [refresh, setRefresh] = useState(0);
+
+  async function enter(gym: AvailableGym) {
+    // A client-side selection is only a hint; every API request still verifies
+    // this Clerk identity's active membership inside the chosen gym database.
+    document.cookie = `mygym_gym=${encodeURIComponent(gym.id)}; Path=/api; SameSite=Lax`;
+    client.clear();
+    navigate('/dashboard');
   }
-  return <PendingPanel />;
+
+  useEffect(() => {
+    let cancelled = false;
+    customFetch<AvailableGym[]>('/api/platform/workspaces/me', { responseType: 'json' })
+      .then(async items => {
+        if (cancelled) return;
+        setError('');
+        setGyms(items);
+        if (items.length === 1) await enter(items[0]);
+      })
+      .catch(() => { if (!cancelled) setError('Unable to verify gym access. Please retry.'); });
+    return () => { cancelled = true; };
+  }, [refresh]);
+
+  if (error) return <main className="pending-page"><section className="pending-card"><h1>Gym selection unavailable</h1><p>{error}</p><button className="button button-primary" onClick={() => {setError('');setRefresh(n => n + 1);}}>Retry</button></section></main>;
+  if (gyms === null || gyms.length === 1) return <LoadingPage />;
+  if (gyms.length === 0) return <PendingPanel />;
+  return <main className="pending-page">
+    <header className="pending-nav"><Brand /><span className="pending-secure"><ShieldCheck size={15}/> VERIFIED STAFF WORKSPACES</span></header>
+    <section className="pending-card page-enter">
+      <div className="pending-icon"><Dumbbell size={23}/></div>
+      <span className="small-cap">GYM WORKSPACES</span>
+      <h1>Choose your<br/><em>gym.</em></h1>
+      <p>Only gyms where your sign-in account has active staff access are listed.</p>
+      {gyms.map(gym => <button key={gym.id} type="button" className="button button-primary pending-button"
+        onClick={() => enter(gym)} data-testid={`select-gym-${gym.id}`}>
+        {gym.name} · {gym.role} <ArrowRight size={16}/>
+      </button>)}
+    </section>
+  </main>;
+}
+
+function AccessPendingPage() {
+  return <WorkspaceSelection />;
 }
 
 function SessionSignOut() {
@@ -517,33 +559,10 @@ function SessionExpired() {
 }
 
 function PendingPanel({ staff }: { staff?: CurrentStaff }) {
-  const { signOut } = useClerk();
   const client = useQueryClient();
+  const { signOut } = useClerk();
   const [, setLocation] = useLocation();
   const [bootstrapError, setBootstrapError] = useState('');
-  // MYGYM_AUTO_SIGNUP_RETURNING_OWNER_V1
-  useEffect(() => {
-    let cancelled = false;
-    customSignupOwner();
-    async function customSignupOwner() {
-      try {
-        // Reuse the existing auth-aware API client and its token getter.
-        const signup = await customFetch<{id:string; status:string} | null>(
-          '/api/platform/signup/me', {responseType:'json'});
-        if (cancelled || !signup) return;
-        if (signup.status === 'active') {
-          document.cookie = `mygym_gym=${encodeURIComponent(signup.id)}; Path=/api; SameSite=Lax`;
-          await client.invalidateQueries({queryKey:getGetCurrentStaffQueryKey()});
-          if (!cancelled) setLocation('/setup');
-        } else if (!cancelled) {
-          setLocation('/setup/new-gym');
-        }
-      } catch {
-        // Staff joining an existing gym should retain the access-pending flow.
-      }
-    }
-    return () => {cancelled = true;};
-  }, [client, setLocation]);
   const bootstrapOwner = useBootstrapInitialOwner({
     mutation: {
       onSuccess: async () => {

@@ -18,6 +18,8 @@ class AppSettings(BaseSettings):
     database_url: str | None = None
     clerk_publishable_key: str | None = None
     clerk_secret_key: str | None = None
+    clerk_authorized_parties: str | None = None
+    member_portal_gym_id: str | None = None
     initial_owner_email: str | None = None
 
     def clerk_frontend_api_host(self) -> str:
@@ -47,6 +49,13 @@ class AppSettings(BaseSettings):
 
     def clerk_jwks_url(self) -> str:
         return f"{self.clerk_issuer()}/.well-known/jwks.json"
+
+    def allowed_clerk_authorized_parties(self) -> set[str]:
+        return {
+            value.strip().rstrip("/")
+            for value in (self.clerk_authorized_parties or "").split(",")
+            if value.strip()
+        }
 
 
 @lru_cache

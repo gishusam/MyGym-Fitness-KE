@@ -2248,3 +2248,231 @@ export const DownloadEventCoverParams = zod.object({
 export const DownloadEventCoverResponse = zod.unknown()
 
 
+/**
+ * @summary Get the signed-in member profile and pass
+ */
+export const getCurrentMemberProfileResponseCheckInsThisMonthMin = 0;
+
+
+
+export const GetCurrentMemberProfileResponse = zod.object({
+  "id": zod.string().uuid(),
+  "memberNumber": zod.string(),
+  "fullName": zod.string(),
+  "email": zod.string().email().nullable(),
+  "phone": zod.string(),
+  "status": zod.enum(['active', 'inactive']),
+  "registeredAt": zod.coerce.date(),
+  "qrToken": zod.string(),
+  "membership": zod.union([zod.object({
+  "id": zod.string().uuid(),
+  "planName": zod.string(),
+  "monthlyPriceKes": zod.number().int(),
+  "startsOn": zod.coerce.date(),
+  "expiresOn": zod.coerce.date(),
+  "status": zod.enum(['active', 'scheduled', 'expired', 'cancelled'])
+}),zod.null()]),
+  "checkInsThisMonth": zod.number().int().min(getCurrentMemberProfileResponseCheckInsThisMonthMin)
+})
+
+
+/**
+ * @summary List workouts assigned to the signed-in member
+ */
+export const listMyWorkoutsResponseSessionsItemExercisesItemWeightKgMin = 0;
+export const listMyWorkoutsResponseSessionsItemExercisesItemWeightKgMax = 1000;
+
+export const listMyWorkoutsResponseSessionsItemExercisesItemRepsCompletedMin = 0;
+export const listMyWorkoutsResponseSessionsItemExercisesItemRepsCompletedMax = 1000;
+
+export const listMyWorkoutsResponseSessionsItemExercisesItemDurationSecondsCompletedMin = 0;
+export const listMyWorkoutsResponseSessionsItemExercisesItemDurationSecondsCompletedMax = 86400;
+
+
+
+export const ListMyWorkoutsResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "programId": zod.string().uuid(),
+  "programName": zod.string(),
+  "goal": zod.string(),
+  "description": zod.string().nullable(),
+  "startsOn": zod.coerce.date(),
+  "status": zod.enum(['assigned', 'in_progress', 'completed']),
+  "notes": zod.string().nullable(),
+  "recommendedDaysPerWeek": zod.number().int(),
+  "expectedSessionMinutes": zod.number().int(),
+  "exercises": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "position": zod.number().int(),
+  "name": zod.string(),
+  "sets": zod.number().int(),
+  "repetitions": zod.number().int().nullable(),
+  "durationSeconds": zod.number().int().nullable(),
+  "restSeconds": zod.number().int().nullable()
+})),
+  "sessions": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "sessionDate": zod.coerce.date(),
+  "status": zod.enum(['in_progress', 'completed']),
+  "exercises": zod.array(zod.object({
+  "exerciseId": zod.string().uuid(),
+  "completed": zod.boolean(),
+  "weightKg": zod.number().min(listMyWorkoutsResponseSessionsItemExercisesItemWeightKgMin).max(listMyWorkoutsResponseSessionsItemExercisesItemWeightKgMax).nullable(),
+  "repsCompleted": zod.number().int().min(listMyWorkoutsResponseSessionsItemExercisesItemRepsCompletedMin).max(listMyWorkoutsResponseSessionsItemExercisesItemRepsCompletedMax).nullable(),
+  "durationSecondsCompleted": zod.number().int().min(listMyWorkoutsResponseSessionsItemExercisesItemDurationSecondsCompletedMin).max(listMyWorkoutsResponseSessionsItemExercisesItemDurationSecondsCompletedMax).nullable()
+})),
+  "recordedAt": zod.coerce.date(),
+  "completedAt": zod.coerce.date().nullable()
+}))
+})
+export const ListMyWorkoutsResponse = zod.array(ListMyWorkoutsResponseItem)
+
+
+/**
+ * @summary Save today's session for one of the member's assignments
+ */
+export const SaveMyWorkoutSessionParams = zod.object({
+  "assignmentId": zod.coerce.string().uuid()
+})
+
+export const saveMyWorkoutSessionBodyExercisesItemWeightKgMin = 0;
+export const saveMyWorkoutSessionBodyExercisesItemWeightKgMax = 1000;
+
+export const saveMyWorkoutSessionBodyExercisesItemRepsCompletedMin = 0;
+export const saveMyWorkoutSessionBodyExercisesItemRepsCompletedMax = 1000;
+
+export const saveMyWorkoutSessionBodyExercisesItemDurationSecondsCompletedMin = 0;
+export const saveMyWorkoutSessionBodyExercisesItemDurationSecondsCompletedMax = 86400;
+
+export const saveMyWorkoutSessionBodyExercisesMax = 30;
+
+
+
+export const SaveMyWorkoutSessionBody = zod.object({
+  "exercises": zod.array(zod.object({
+  "exerciseId": zod.string().uuid(),
+  "completed": zod.boolean(),
+  "weightKg": zod.number().min(saveMyWorkoutSessionBodyExercisesItemWeightKgMin).max(saveMyWorkoutSessionBodyExercisesItemWeightKgMax).nullish(),
+  "repsCompleted": zod.number().int().min(saveMyWorkoutSessionBodyExercisesItemRepsCompletedMin).max(saveMyWorkoutSessionBodyExercisesItemRepsCompletedMax).nullish(),
+  "durationSecondsCompleted": zod.number().int().min(saveMyWorkoutSessionBodyExercisesItemDurationSecondsCompletedMin).max(saveMyWorkoutSessionBodyExercisesItemDurationSecondsCompletedMax).nullish()
+})).min(1).max(saveMyWorkoutSessionBodyExercisesMax)
+})
+
+export const saveMyWorkoutSessionResponseExercisesItemWeightKgMin = 0;
+export const saveMyWorkoutSessionResponseExercisesItemWeightKgMax = 1000;
+
+export const saveMyWorkoutSessionResponseExercisesItemRepsCompletedMin = 0;
+export const saveMyWorkoutSessionResponseExercisesItemRepsCompletedMax = 1000;
+
+export const saveMyWorkoutSessionResponseExercisesItemDurationSecondsCompletedMin = 0;
+export const saveMyWorkoutSessionResponseExercisesItemDurationSecondsCompletedMax = 86400;
+
+
+
+export const SaveMyWorkoutSessionResponse = zod.object({
+  "id": zod.string().uuid(),
+  "sessionDate": zod.coerce.date(),
+  "status": zod.enum(['in_progress', 'completed']),
+  "exercises": zod.array(zod.object({
+  "exerciseId": zod.string().uuid(),
+  "completed": zod.boolean(),
+  "weightKg": zod.number().min(saveMyWorkoutSessionResponseExercisesItemWeightKgMin).max(saveMyWorkoutSessionResponseExercisesItemWeightKgMax).nullable(),
+  "repsCompleted": zod.number().int().min(saveMyWorkoutSessionResponseExercisesItemRepsCompletedMin).max(saveMyWorkoutSessionResponseExercisesItemRepsCompletedMax).nullable(),
+  "durationSecondsCompleted": zod.number().int().min(saveMyWorkoutSessionResponseExercisesItemDurationSecondsCompletedMin).max(saveMyWorkoutSessionResponseExercisesItemDurationSecondsCompletedMax).nullable()
+})),
+  "recordedAt": zod.coerce.date(),
+  "completedAt": zod.coerce.date().nullable()
+})
+
+
+/**
+ * @summary List published upcoming events and registration status
+ */
+export const listMyEventsResponseOneRegisteredCountMin = 0;
+
+export const listMyEventsResponseOneRemainingSlotsMin = 0;
+
+
+
+export const ListMyEventsResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "capacity": zod.number().int(),
+  "instructorStaffId": zod.string().uuid().nullable(),
+  "instructorName": zod.string().nullable(),
+  "status": zod.enum(['draft', 'published', 'cancelled']),
+  "registeredCount": zod.number().int().min(listMyEventsResponseOneRegisteredCountMin),
+  "remainingSlots": zod.number().int().min(listMyEventsResponseOneRemainingSlotsMin),
+  "coverUrl": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).and(zod.object({
+  "registrationStatus": zod.union([zod.literal('confirmed'),zod.literal('cancelled'),zod.literal(null)]).nullish()
+}))
+export const ListMyEventsResponse = zod.array(ListMyEventsResponseItem)
+
+
+/**
+ * @summary Register the signed-in member for an event
+ */
+export const RegisterMyselfForEventParams = zod.object({
+  "eventId": zod.coerce.string().uuid()
+})
+
+export const RegisterMyselfForEventResponse = zod.object({
+  "id": zod.string().uuid(),
+  "eventId": zod.string().uuid(),
+  "memberId": zod.string().uuid(),
+  "memberNumber": zod.string(),
+  "memberName": zod.string(),
+  "status": zod.enum(['confirmed', 'cancelled']),
+  "registeredAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Cancel the signed-in member's registration
+ */
+export const CancelMyEventRegistrationParams = zod.object({
+  "eventId": zod.coerce.string().uuid()
+})
+
+export const CancelMyEventRegistrationResponse = zod.object({
+  "id": zod.string().uuid(),
+  "eventId": zod.string().uuid(),
+  "memberId": zod.string().uuid(),
+  "memberNumber": zod.string(),
+  "memberName": zod.string(),
+  "status": zod.enum(['confirmed', 'cancelled']),
+  "registeredAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Get the member's progress records
+ */
+export const getMyProgressResponseCheckInsThisMonthMin = 0;
+
+export const getMyProgressResponseWorkoutsThisMonthMin = 0;
+
+
+
+export const GetMyProgressResponse = zod.object({
+  "assessments": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "recordedAt": zod.coerce.date(),
+  "weightKg": zod.number().nullable(),
+  "heightCm": zod.number().nullable(),
+  "bmi": zod.number().nullable(),
+  "bodyFatPercent": zod.number().nullable(),
+  "musclePercent": zod.number().nullable(),
+  "visceralFatLevel": zod.number().nullable()
+})),
+  "checkInsThisMonth": zod.number().int().min(getMyProgressResponseCheckInsThisMonthMin),
+  "workoutsThisMonth": zod.number().int().min(getMyProgressResponseWorkoutsThisMonthMin)
+})
+
+

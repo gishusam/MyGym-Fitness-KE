@@ -178,6 +178,47 @@ class WorkoutAssignment(Base):
     )
 
 
+class WorkoutSession(Base):
+    __tablename__ = "workout_sessions"
+    __table_args__ = (
+        UniqueConstraint(
+            "assignment_id", "session_date", name="workout_sessions_assignment_date_unique"
+        ),
+        CheckConstraint(
+            "status IN ('in_progress', 'completed')",
+            name="workout_sessions_status_check",
+        ),
+        Index("ix_workout_sessions_member_date", "member_id", "session_date"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    assignment_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("workout_assignments.id", ondelete="CASCADE"), nullable=False
+    )
+    member_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("members.id", ondelete="RESTRICT"), nullable=False
+    )
+    session_date: Mapped[date] = mapped_column(Date, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="in_progress", server_default="in_progress"
+    )
+    exercises: Mapped[list[dict]] = mapped_column(
+        JSON, nullable=False, default=list, server_default=text("'[]'")
+    )
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class WorkoutResource(Base):
     __tablename__ = "workout_resources"
     __table_args__ = (

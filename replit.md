@@ -36,13 +36,16 @@ Gym management and member engagement for a single gym in Kenya, built around sim
 
 - Business endpoints and role checks live in FastAPI; Express only serves Clerk's production browser proxy.
 - Staff roles are application database records, not client-controlled or inferred from Clerk metadata.
+- The member mobile app is pinned server-side to one active gym registry entry. It uses the existing gym database mapping and does not accept a gym selector from the app, add another tenant model, or create a second member database.
+- A mobile Clerk subject links to one staff-created member record only after a verified email uniquely matches. Member endpoints derive ownership from the verified Clerk session and do not accept a member ID from the app.
+- Member workout sessions are persisted against existing workout assignments; event self-registration reuses the existing capacity-safe registration flow.
 - The first owner is bootstrapped only when the signed-in Clerk account has a verified `INITIAL_OWNER_EMAIL`; first sign-in does not equal owner.
 - Gym settings start in `Africa/Nairobi` and `KES`; peak-access hours remain unconfigured until the owner confirms them in membership-plan setup.
 - Development schema changes use Alembic; production schema changes for the managed database follow Replit's publish-time database workflow.
 
 ## Product
 
-Milestone 1 provides Clerk staff sign-in, role-aware navigation, a secure owner bootstrap flow, and persisted gym settings with audit logging. Later milestones add memberships, payments, attendance, fitness plans, member access, events, and engagement workflows.
+The staff platform covers gym operations. The member mobile client is configured for one gym and uses that gym's existing member, membership, workout, event, attendance, and fitness-assessment records; it does not introduce an independent membership system or tenant model.
 
 ## User preferences
 
@@ -54,6 +57,9 @@ Milestone 1 provides Clerk staff sign-in, role-aware navigation, a secure owner 
 
 - The initial owner bootstrap returns 503 until `INITIAL_OWNER_EMAIL` is configured; it never grants owner to an arbitrary first account.
 - Run API code generation after changing `lib/api-spec/openapi.yaml`.
+- Run Alembic revision `0008_member_mobile_integration` before the mobile app uses member linking or persisted workout sessions.
+- Configure `CLERK_AUTHORIZED_PARTIES` with the exact native Clerk session `azp` value; keep Clerk secret values in Replit Secrets, never in the mobile app.
+- Set `MEMBER_PORTAL_GYM_ID` to the one active gym registry record before enabling the mobile member routes. The server fails closed if it is unset, inactive, or has an unrecognized database mapping; never take this ID from a mobile request.
 - The FastAPI service uses its managed `PORT`; its app directory is the repository root relative to the API artifact workflow.
 
 ## Pointers

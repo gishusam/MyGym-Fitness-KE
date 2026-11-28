@@ -54,12 +54,18 @@ import type {
   ListWorkoutAssignmentsParams,
   ListWorkoutProgramsParams,
   MemberDetail,
+  MemberEvent,
   MemberInput,
   MemberOnboardingInput,
   MemberOnboardingView,
   MemberPage,
+  MemberProfile,
+  MemberProgress,
   MemberQr,
   MemberUpdate,
+  MemberWorkout,
+  MemberWorkoutSession,
+  MemberWorkoutSessionInput,
   MembershipPlan,
   MembershipPlanInput,
   MembershipPlanUpdate,
@@ -210,6 +216,13 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
+
 export const getGetCurrentStaffUrl = () => {
 
 
@@ -4999,6 +5012,647 @@ export function useDownloadEventCover<TData = Awaited<ReturnType<typeof download
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getDownloadEventCoverQueryOptions(eventId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetCurrentMemberProfileUrl = () => {
+
+
+
+
+  return `/api/member/me`
+}
+
+/**
+ * @summary Get the signed-in member profile and pass
+ */
+export const getCurrentMemberProfile = async ( options?: Parameters<typeof customFetch>[1]): Promise<MemberProfile> => {
+
+  return customFetch<MemberProfile>(getGetCurrentMemberProfileUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCurrentMemberProfileQueryKey = () => {
+    return [
+    `/api/member/me`
+    ] as const;
+    }
+
+
+export const getGetCurrentMemberProfileQueryOptions = <TData = Awaited<ReturnType<typeof getCurrentMemberProfile>>, TError = ErrorType<ApiError>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentMemberProfile>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCurrentMemberProfileQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCurrentMemberProfile>>> = ({ signal }) => getCurrentMemberProfile({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCurrentMemberProfile>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetCurrentMemberProfileQueryResult = NonNullable<Awaited<ReturnType<typeof getCurrentMemberProfile>>>
+export type GetCurrentMemberProfileQueryError = ErrorType<ApiError>
+
+
+export function useGetCurrentMemberProfile<TData = Awaited<ReturnType<typeof getCurrentMemberProfile>>, TError = ErrorType<ApiError>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentMemberProfile>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCurrentMemberProfile>>,
+          TError,
+          Awaited<ReturnType<typeof getCurrentMemberProfile>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetCurrentMemberProfile<TData = Awaited<ReturnType<typeof getCurrentMemberProfile>>, TError = ErrorType<ApiError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentMemberProfile>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCurrentMemberProfile>>,
+          TError,
+          Awaited<ReturnType<typeof getCurrentMemberProfile>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetCurrentMemberProfile<TData = Awaited<ReturnType<typeof getCurrentMemberProfile>>, TError = ErrorType<ApiError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentMemberProfile>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get the signed-in member profile and pass
+ */
+
+export function useGetCurrentMemberProfile<TData = Awaited<ReturnType<typeof getCurrentMemberProfile>>, TError = ErrorType<ApiError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentMemberProfile>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetCurrentMemberProfileQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListMyWorkoutsUrl = () => {
+
+
+
+
+  return `/api/member/workouts`
+}
+
+/**
+ * @summary List workouts assigned to the signed-in member
+ */
+export const listMyWorkouts = async ( options?: Parameters<typeof customFetch>[1]): Promise<MemberWorkout[]> => {
+
+  return customFetch<MemberWorkout[]>(getListMyWorkoutsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMyWorkoutsQueryKey = () => {
+    return [
+    `/api/member/workouts`
+    ] as const;
+    }
+
+
+export const getListMyWorkoutsQueryOptions = <TData = Awaited<ReturnType<typeof listMyWorkouts>>, TError = ErrorType<ApiError>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyWorkouts>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMyWorkoutsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyWorkouts>>> = ({ signal }) => listMyWorkouts({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMyWorkouts>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListMyWorkoutsQueryResult = NonNullable<Awaited<ReturnType<typeof listMyWorkouts>>>
+export type ListMyWorkoutsQueryError = ErrorType<ApiError>
+
+
+export function useListMyWorkouts<TData = Awaited<ReturnType<typeof listMyWorkouts>>, TError = ErrorType<ApiError>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyWorkouts>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMyWorkouts>>,
+          TError,
+          Awaited<ReturnType<typeof listMyWorkouts>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListMyWorkouts<TData = Awaited<ReturnType<typeof listMyWorkouts>>, TError = ErrorType<ApiError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyWorkouts>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMyWorkouts>>,
+          TError,
+          Awaited<ReturnType<typeof listMyWorkouts>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListMyWorkouts<TData = Awaited<ReturnType<typeof listMyWorkouts>>, TError = ErrorType<ApiError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyWorkouts>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List workouts assigned to the signed-in member
+ */
+
+export function useListMyWorkouts<TData = Awaited<ReturnType<typeof listMyWorkouts>>, TError = ErrorType<ApiError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyWorkouts>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListMyWorkoutsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSaveMyWorkoutSessionUrl = (assignmentId: string,) => {
+
+
+
+
+  return `/api/member/workouts/${assignmentId}/sessions`
+}
+
+/**
+ * @summary Save today's session for one of the member's assignments
+ */
+export const saveMyWorkoutSession = async (assignmentId: string,
+    memberWorkoutSessionInput: MemberWorkoutSessionInput, options?: Parameters<typeof customFetch>[1]): Promise<MemberWorkoutSession> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<MemberWorkoutSession>(getSaveMyWorkoutSessionUrl(assignmentId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(memberWorkoutSessionInput)
+  }
+);}
+
+
+
+
+
+export const getSaveMyWorkoutSessionMutationKey = () => ['saveMyWorkoutSession'] as const;
+
+export const getSaveMyWorkoutSessionMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveMyWorkoutSession>>, TError,SaveMyWorkoutSessionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveMyWorkoutSession>>, TError,SaveMyWorkoutSessionMutationVariables, TContext> => {
+
+const mutationKey = getSaveMyWorkoutSessionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveMyWorkoutSession>>, SaveMyWorkoutSessionMutationVariables> = (props) => {
+          const {assignmentId,data} = props ?? {};
+
+          return  saveMyWorkoutSession(assignmentId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveMyWorkoutSessionMutationResult = NonNullable<Awaited<ReturnType<typeof saveMyWorkoutSession>>>
+    export type SaveMyWorkoutSessionMutationBody = BodyType<MemberWorkoutSessionInput>
+    export type SaveMyWorkoutSessionMutationError = ErrorType<ApiError>
+    export type SaveMyWorkoutSessionMutationVariables = {assignmentId: string;data: BodyType<MemberWorkoutSessionInput>}
+
+    /**
+ * @summary Save today's session for one of the member's assignments
+ */
+export const useSaveMyWorkoutSession = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveMyWorkoutSession>>, TError,SaveMyWorkoutSessionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof saveMyWorkoutSession>>,
+        TError,
+        SaveMyWorkoutSessionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSaveMyWorkoutSessionMutationOptions(options), queryClient);
+    }
+
+export const getListMyEventsUrl = () => {
+
+
+
+
+  return `/api/member/events`
+}
+
+/**
+ * @summary List published upcoming events and registration status
+ */
+export const listMyEvents = async ( options?: Parameters<typeof customFetch>[1]): Promise<MemberEvent[]> => {
+
+  return customFetch<MemberEvent[]>(getListMyEventsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMyEventsQueryKey = () => {
+    return [
+    `/api/member/events`
+    ] as const;
+    }
+
+
+export const getListMyEventsQueryOptions = <TData = Awaited<ReturnType<typeof listMyEvents>>, TError = ErrorType<ApiError>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyEvents>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMyEventsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyEvents>>> = ({ signal }) => listMyEvents({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMyEvents>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListMyEventsQueryResult = NonNullable<Awaited<ReturnType<typeof listMyEvents>>>
+export type ListMyEventsQueryError = ErrorType<ApiError>
+
+
+export function useListMyEvents<TData = Awaited<ReturnType<typeof listMyEvents>>, TError = ErrorType<ApiError>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyEvents>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMyEvents>>,
+          TError,
+          Awaited<ReturnType<typeof listMyEvents>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListMyEvents<TData = Awaited<ReturnType<typeof listMyEvents>>, TError = ErrorType<ApiError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyEvents>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMyEvents>>,
+          TError,
+          Awaited<ReturnType<typeof listMyEvents>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListMyEvents<TData = Awaited<ReturnType<typeof listMyEvents>>, TError = ErrorType<ApiError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyEvents>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List published upcoming events and registration status
+ */
+
+export function useListMyEvents<TData = Awaited<ReturnType<typeof listMyEvents>>, TError = ErrorType<ApiError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyEvents>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListMyEventsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRegisterMyselfForEventUrl = (eventId: string,) => {
+
+
+
+
+  return `/api/member/events/${eventId}/registration`
+}
+
+/**
+ * @summary Register the signed-in member for an event
+ */
+export const registerMyselfForEvent = async (eventId: string, options?: Parameters<typeof customFetch>[1]): Promise<EventRegistration> => {
+
+  return customFetch<EventRegistration>(getRegisterMyselfForEventUrl(eventId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRegisterMyselfForEventMutationKey = () => ['registerMyselfForEvent'] as const;
+
+export const getRegisterMyselfForEventMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerMyselfForEvent>>, TError,RegisterMyselfForEventMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof registerMyselfForEvent>>, TError,RegisterMyselfForEventMutationVariables, TContext> => {
+
+const mutationKey = getRegisterMyselfForEventMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof registerMyselfForEvent>>, RegisterMyselfForEventMutationVariables> = (props) => {
+          const {eventId} = props ?? {};
+
+          return  registerMyselfForEvent(eventId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RegisterMyselfForEventMutationResult = NonNullable<Awaited<ReturnType<typeof registerMyselfForEvent>>>
+
+    export type RegisterMyselfForEventMutationError = ErrorType<ApiError>
+    export type RegisterMyselfForEventMutationVariables = {eventId: string}
+
+    /**
+ * @summary Register the signed-in member for an event
+ */
+export const useRegisterMyselfForEvent = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerMyselfForEvent>>, TError,RegisterMyselfForEventMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof registerMyselfForEvent>>,
+        TError,
+        RegisterMyselfForEventMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRegisterMyselfForEventMutationOptions(options), queryClient);
+    }
+
+export const getCancelMyEventRegistrationUrl = (eventId: string,) => {
+
+
+
+
+  return `/api/member/events/${eventId}/registration`
+}
+
+/**
+ * @summary Cancel the signed-in member's registration
+ */
+export const cancelMyEventRegistration = async (eventId: string, options?: Parameters<typeof customFetch>[1]): Promise<EventRegistration> => {
+
+  return customFetch<EventRegistration>(getCancelMyEventRegistrationUrl(eventId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getCancelMyEventRegistrationMutationKey = () => ['cancelMyEventRegistration'] as const;
+
+export const getCancelMyEventRegistrationMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelMyEventRegistration>>, TError,CancelMyEventRegistrationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof cancelMyEventRegistration>>, TError,CancelMyEventRegistrationMutationVariables, TContext> => {
+
+const mutationKey = getCancelMyEventRegistrationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cancelMyEventRegistration>>, CancelMyEventRegistrationMutationVariables> = (props) => {
+          const {eventId} = props ?? {};
+
+          return  cancelMyEventRegistration(eventId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CancelMyEventRegistrationMutationResult = NonNullable<Awaited<ReturnType<typeof cancelMyEventRegistration>>>
+
+    export type CancelMyEventRegistrationMutationError = ErrorType<ApiError>
+    export type CancelMyEventRegistrationMutationVariables = {eventId: string}
+
+    /**
+ * @summary Cancel the signed-in member's registration
+ */
+export const useCancelMyEventRegistration = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelMyEventRegistration>>, TError,CancelMyEventRegistrationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof cancelMyEventRegistration>>,
+        TError,
+        CancelMyEventRegistrationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCancelMyEventRegistrationMutationOptions(options), queryClient);
+    }
+
+export const getGetMyProgressUrl = () => {
+
+
+
+
+  return `/api/member/progress`
+}
+
+/**
+ * @summary Get the member's progress records
+ */
+export const getMyProgress = async ( options?: Parameters<typeof customFetch>[1]): Promise<MemberProgress> => {
+
+  return customFetch<MemberProgress>(getGetMyProgressUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMyProgressQueryKey = () => {
+    return [
+    `/api/member/progress`
+    ] as const;
+    }
+
+
+export const getGetMyProgressQueryOptions = <TData = Awaited<ReturnType<typeof getMyProgress>>, TError = ErrorType<ApiError>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyProgress>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMyProgressQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyProgress>>> = ({ signal }) => getMyProgress({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyProgress>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetMyProgressQueryResult = NonNullable<Awaited<ReturnType<typeof getMyProgress>>>
+export type GetMyProgressQueryError = ErrorType<ApiError>
+
+
+export function useGetMyProgress<TData = Awaited<ReturnType<typeof getMyProgress>>, TError = ErrorType<ApiError>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyProgress>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMyProgress>>,
+          TError,
+          Awaited<ReturnType<typeof getMyProgress>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetMyProgress<TData = Awaited<ReturnType<typeof getMyProgress>>, TError = ErrorType<ApiError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyProgress>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMyProgress>>,
+          TError,
+          Awaited<ReturnType<typeof getMyProgress>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetMyProgress<TData = Awaited<ReturnType<typeof getMyProgress>>, TError = ErrorType<ApiError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyProgress>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get the member's progress records
+ */
+
+export function useGetMyProgress<TData = Awaited<ReturnType<typeof getMyProgress>>, TError = ErrorType<ApiError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyProgress>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetMyProgressQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

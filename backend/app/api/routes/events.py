@@ -133,6 +133,123 @@ def _registration_response(
     )
 
 
+def register_event_member(
+    session: Session,
+    event_id: UUID,
+    member: Member,
+    *,
+    staff: StaffUser | None = None,
+) -> EventRegistration:
+    """Reserve a published event place and create or restore one registration."""
+    now = datetime.now(timezone.utc)
+    if member.status != MemberStatus.ACTIVE.value:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "Active member not found", "code": "member_not_found"},
+        )
+
+    reservation = session.execute(
+        update(GymEvent)
+        .where(
+            GymEvent.id == event_id,
+            GymEvent.status == "published",
+            GymEvent.ends_at >= now,
+            GymEvent.confirmed_count < GymEvent.capacity,
+            ~select(EventRegistration.id).where(
+                EventRegistration.event_id == event_id,
+                EventRegistration.member_id == member.id,
+                EventRegistration.status == "confirmed",
+            ).exists(),
+        )
+        .values(confirmed_count=GymEvent.confirmed_count + 1)
+    )
+    if reservation.rowcount != 1:
+        session.rollback()
+        event = _find_event(session, event_id)
+        if event.status != "published" or _stored_utc(event.ends_at) < now:
+            raise HTTPException(
+                status_code=409,
+                detail={"error": "This event is not open for registration", "code": "event_not_open"},
+            )
+        duplicate = session.scalar(
+            select(EventRegistration.id).where(
+                EventRegistration.event_id == event_id,
+                EventRegistration.member_id == member.id,
+                EventRegistration.status == "confirmed",
+            )
+        )
+        if duplicate is not None:
+            raise HTTPException(
+                status_code=409,
+                detail={"error": "This member is already registered", "code": "event_duplicate_registration"},
+            )
+        raise HTTPException(
+            status_code=409,
+            detail={"error": "This event has reached capacity", "code": "event_capacity_reached"},
+        )
+
+    event = _find_event(session, event_id)
+    existing = session.scalar(
+        select(EventRegistration)
+        .where(
+            EventRegistration.event_id == event.id,
+            EventRegistration.member_id == member.id,
+        )
+        .with_for_update()
+    )
+    if existing is not None and existing.status == "confirmed":
+        session.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail={"error": "This member is already registered", "code": "event_duplicate_registration"},
+        )
+
+    if existing is None:
+        registration = EventRegistration(
+            id=uuid4(),
+            event_id=event.id,
+            member_id=member.id,
+            registered_by_staff_id=staff.id if staff else None,
+            status="confirmed",
+        )
+        session.add(registration)
+    else:
+        registration = existing
+        registration.status = "confirmed"
+        registration.registered_by_staff_id = staff.id if staff else None
+        registration.registered_at = now
+
+    if staff:
+        _audit(
+            session,
+            staff,
+            "event.member_registered",
+            "event_registration",
+            registration.id,
+            {"event_id": str(event.id), "member_id": str(member.id)},
+        )
+    else:
+        session.add(
+            AuditLog(
+                actor_staff_id=None,
+                action="event.member_self_registered",
+                entity_type="event_registration",
+                entity_id=str(registration.id),
+                details={"event_id": str(event.id), "member_id": str(member.id)},
+            )
+        )
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail={"error": "This member is already registered", "code": "event_duplicate_registration"},
+        ) from None
+    session.refresh(registration)
+    return registration
+
+
 @router.get("", operation_id="listEvents", response_model=list[EventResponse])
 def list_events(
     timeframe: Literal["upcoming", "past"] | None = None,
@@ -320,103 +437,13 @@ def register_member_for_event(
     staff: StaffUser = Depends(get_current_staff),
     session: Session = Depends(get_db),
 ) -> EventRegistrationResponse:
-    now = datetime.now(timezone.utc)
-    # Reserve the slot with a conditional UPDATE before reading event or member
-    # rows. The event row is locked atomically by both PostgreSQL and SQLite, so
-    # simultaneous requests cannot both consume the final place.
-    reservation = session.execute(
-        update(GymEvent)
-        .where(
-            GymEvent.id == event_id,
-            GymEvent.status == "published",
-            GymEvent.ends_at >= now,
-            GymEvent.confirmed_count < GymEvent.capacity,
-            ~select(EventRegistration.id).where(
-                EventRegistration.event_id == event_id,
-                EventRegistration.member_id == data.member_id,
-                EventRegistration.status == "confirmed",
-            ).exists(),
-        )
-        .values(confirmed_count=GymEvent.confirmed_count + 1)
-    )
-    if reservation.rowcount != 1:
-        session.rollback()
-        event = _find_event(session, event_id)
-        if event.status != "published" or _stored_utc(event.ends_at) < now:
-            raise HTTPException(
-                status_code=409,
-                detail={"error": "This event is not open for registration", "code": "event_not_open"},
-            )
-        duplicate = session.scalar(
-            select(EventRegistration.id).where(
-                EventRegistration.event_id == event_id,
-                EventRegistration.member_id == data.member_id,
-                EventRegistration.status == "confirmed",
-            )
-        )
-        if duplicate is not None:
-            raise HTTPException(
-                status_code=409,
-                detail={"error": "This member is already registered", "code": "event_duplicate_registration"},
-            )
-        raise HTTPException(
-            status_code=409,
-            detail={"error": "This event has reached capacity", "code": "event_capacity_reached"},
-        )
-    event = _find_event(session, event_id)
     member = session.get(Member, data.member_id)
-    if member is None or member.status != MemberStatus.ACTIVE.value:
-        session.rollback()
+    if member is None:
         raise HTTPException(
             status_code=404,
             detail={"error": "Active member not found", "code": "member_not_found"},
         )
-    existing = session.scalar(
-        select(EventRegistration)
-        .where(
-            EventRegistration.event_id == event.id,
-            EventRegistration.member_id == member.id,
-        )
-        .with_for_update()
-    )
-    if existing is not None and existing.status == "confirmed":
-        session.rollback()
-        raise HTTPException(
-            status_code=409,
-            detail={"error": "This member is already registered", "code": "event_duplicate_registration"},
-        )
-
-    if existing is None:
-        registration = EventRegistration(
-            id=uuid4(),
-            event_id=event.id,
-            member_id=member.id,
-            registered_by_staff_id=staff.id,
-            status="confirmed",
-        )
-        session.add(registration)
-    else:
-        registration = existing
-        registration.status = "confirmed"
-        registration.registered_by_staff_id = staff.id
-        registration.registered_at = now
-    _audit(
-        session,
-        staff,
-        "event.member_registered",
-        "event_registration",
-        registration.id,
-        {"event_id": str(event.id), "member_id": str(member.id)},
-    )
-    try:
-        session.commit()
-    except IntegrityError:
-        session.rollback()
-        raise HTTPException(
-            status_code=409,
-            detail={"error": "This member is already registered", "code": "event_duplicate_registration"},
-        ) from None
-    session.refresh(registration)
+    registration = register_event_member(session, event_id, member, staff=staff)
     return _registration_response(registration, member)
 
 

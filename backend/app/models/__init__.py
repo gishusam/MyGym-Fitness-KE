@@ -20,6 +20,7 @@ from backend.app.models.workout import (
     WorkoutExercise,
     WorkoutProgram,
     WorkoutResource,
+    WorkoutSession,
 )
 
 __all__ = [
@@ -48,4 +49,5 @@ __all__ = [
     "WorkoutExercise",
     "WorkoutProgram",
     "WorkoutResource",
+    "WorkoutSession",
 ]

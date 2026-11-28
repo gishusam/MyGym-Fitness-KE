@@ -30,6 +30,8 @@ tags:
     description: Public onboarding and trainer review
   - name: events
     description: Gym classes, events and staff-managed registrations
+  - name: member app
+    description: Authenticated member workouts, events and personal progress
 paths:
   /healthz:
     get:
@@ -1763,12 +1765,221 @@ paths:
               schema:
                 type: string
                 format: binary
+  /member/me:
+    get:
+      operationId: getCurrentMemberProfile
+      tags: [member app]
+      summary: Get the signed-in member profile and pass
+      security:
+        - clerkBearer: []
+      responses:
+        "200":
+          description: The member account associated with the signed-in Clerk user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberProfile"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: No active linked member account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "503":
+          description: Member account verification is not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /member/workouts:
+    get:
+      operationId: listMyWorkouts
+      tags: [member app]
+      summary: List workouts assigned to the signed-in member
+      security:
+        - clerkBearer: []
+      responses:
+        "200":
+          description: Assigned programs and saved workout sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MemberWorkout"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /member/workouts/{assignmentId}/sessions:
+    post:
+      operationId: saveMyWorkoutSession
+      tags: [member app]
+      summary: Save today's session for one of the member's assignments
+      security:
+        - clerkBearer: []
+      parameters:
+        - name: assignmentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberWorkoutSessionInput"
+      responses:
+        "200":
+          description: Saved workout session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberWorkoutSession"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Workout assignment not found for this member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "422":
+          description: Invalid exercise data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /member/events:
+    get:
+      operationId: listMyEvents
+      tags: [member app]
+      summary: List published upcoming events and registration status
+      security:
+        - clerkBearer: []
+      responses:
+        "200":
+          description: Upcoming published events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MemberEvent"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /member/events/{eventId}/registration:
+    post:
+      operationId: registerMyselfForEvent
+      tags: [member app]
+      summary: Register the signed-in member for an event
+      security:
+        - clerkBearer: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "201":
+          description: Member registration created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventRegistration"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Event is closed, full, or already booked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    delete:
+      operationId: cancelMyEventRegistration
+      tags: [member app]
+      summary: Cancel the signed-in member's registration
+      security:
+        - clerkBearer: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Registration cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventRegistration"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Active registration not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /member/progress:
+    get:
+      operationId: getMyProgress
+      tags: [member app]
+      summary: Get the member's progress records
+      security:
+        - clerkBearer: []
+      responses:
+        "200":
+          description: Assessments and monthly visit and workout totals for this member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberProgress"
+        "401":
+          description: Sign-in required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
 components:
   securitySchemes:
     clerkSession:
       type: apiKey
       in: cookie
       name: __session
+    clerkBearer:
+      type: http
+      scheme: bearer
   schemas:
     HealthStatus:
       type: object
@@ -2420,6 +2631,117 @@ components:
         bodyFatPercent: { type: [number, "null"] }
         musclePercent: { type: [number, "null"] }
         visceralFatLevel: { type: [number, "null"] }
+    MemberMembership:
+      type: object
+      required: [id, planName, monthlyPriceKes, startsOn, expiresOn, status]
+      properties:
+        id: { type: string, format: uuid }
+        planName: { type: string }
+        monthlyPriceKes: { type: integer }
+        startsOn: { type: string, format: date }
+        expiresOn: { type: string, format: date }
+        status: { type: string, enum: [active, scheduled, expired, cancelled] }
+    MemberProfile:
+      type: object
+      required: [id, memberNumber, fullName, email, phone, status, registeredAt, qrToken, membership, checkInsThisMonth]
+      properties:
+        id: { type: string, format: uuid }
+        memberNumber: { type: string }
+        fullName: { type: string }
+        email: { type: [string, "null"], format: email }
+        phone: { type: string }
+        status: { type: string, enum: [active, inactive] }
+        registeredAt: { type: string, format: date-time }
+        qrToken: { type: string }
+        membership:
+          anyOf:
+            - $ref: "#/components/schemas/MemberMembership"
+            - type: "null"
+        checkInsThisMonth: { type: integer, minimum: 0 }
+    MemberWorkoutExercise:
+      type: object
+      required: [id, position, name, sets, repetitions, durationSeconds, restSeconds]
+      properties:
+        id: { type: string, format: uuid }
+        position: { type: integer }
+        name: { type: string }
+        sets: { type: integer }
+        repetitions: { type: [integer, "null"] }
+        durationSeconds: { type: [integer, "null"] }
+        restSeconds: { type: [integer, "null"] }
+    MemberWorkoutExerciseLog:
+      type: object
+      required: [exerciseId, completed, weightKg, repsCompleted, durationSecondsCompleted]
+      properties:
+        exerciseId: { type: string, format: uuid }
+        completed: { type: boolean }
+        weightKg: { type: [number, "null"], minimum: 0, maximum: 1000 }
+        repsCompleted: { type: [integer, "null"], minimum: 0, maximum: 1000 }
+        durationSecondsCompleted: { type: [integer, "null"], minimum: 0, maximum: 86400 }
+    MemberWorkoutSessionInput:
+      type: object
+      required: [exercises]
+      properties:
+        exercises:
+          type: array
+          minItems: 1
+          maxItems: 30
+          items:
+            type: object
+            required: [exerciseId, completed]
+            properties:
+              exerciseId: { type: string, format: uuid }
+              completed: { type: boolean }
+              weightKg: { type: [number, "null"], minimum: 0, maximum: 1000 }
+              repsCompleted: { type: [integer, "null"], minimum: 0, maximum: 1000 }
+              durationSecondsCompleted: { type: [integer, "null"], minimum: 0, maximum: 86400 }
+    MemberWorkoutSession:
+      type: object
+      required: [id, sessionDate, status, exercises, recordedAt, completedAt]
+      properties:
+        id: { type: string, format: uuid }
+        sessionDate: { type: string, format: date }
+        status: { type: string, enum: [in_progress, completed] }
+        exercises:
+          type: array
+          items: { $ref: "#/components/schemas/MemberWorkoutExerciseLog" }
+        recordedAt: { type: string, format: date-time }
+        completedAt: { type: [string, "null"], format: date-time }
+    MemberWorkout:
+      type: object
+      required: [id, programId, programName, goal, description, startsOn, status, notes, recommendedDaysPerWeek, expectedSessionMinutes, exercises, sessions]
+      properties:
+        id: { type: string, format: uuid }
+        programId: { type: string, format: uuid }
+        programName: { type: string }
+        goal: { type: string }
+        description: { type: [string, "null"] }
+        startsOn: { type: string, format: date }
+        status: { type: string, enum: [assigned, in_progress, completed] }
+        notes: { type: [string, "null"] }
+        recommendedDaysPerWeek: { type: integer }
+        expectedSessionMinutes: { type: integer }
+        exercises:
+          type: array
+          items: { $ref: "#/components/schemas/MemberWorkoutExercise" }
+        sessions:
+          type: array
+          items: { $ref: "#/components/schemas/MemberWorkoutSession" }
+    MemberEvent:
+      allOf:
+        - $ref: "#/components/schemas/GymEvent"
+        - type: object
+          properties:
+            registrationStatus: { type: [string, "null"], enum: [confirmed, cancelled, null] }
+    MemberProgress:
+      type: object
+      required: [assessments, checkInsThisMonth, workoutsThisMonth]
+      properties:
+        assessments:
+          type: array
+          items: { $ref: "#/components/schemas/FitnessAssessmentHistoryItem" }
+        checkInsThisMonth: { type: integer, minimum: 0 }
+        workoutsThisMonth: { type: integer, minimum: 0 }
     DashboardSummary:
       type: object
       required: [role, membershipsExpiring, attendanceTrend, revenueTrend, upcomingEvents]

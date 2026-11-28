@@ -612,6 +612,170 @@ export interface TrainerMember {
   latestAssessment?: FitnessAssessmentHistoryItem | null;
 }
 
+export type MemberMembershipStatus = typeof MemberMembershipStatus[keyof typeof MemberMembershipStatus];
+
+
+export const MemberMembershipStatus = {
+  active: 'active',
+  scheduled: 'scheduled',
+  expired: 'expired',
+  cancelled: 'cancelled',
+} as const;
+
+export interface MemberMembership {
+  id: string;
+  planName: string;
+  monthlyPriceKes: number;
+  startsOn: string;
+  expiresOn: string;
+  status: MemberMembershipStatus;
+}
+
+export type MemberProfileStatus = typeof MemberProfileStatus[keyof typeof MemberProfileStatus];
+
+
+export const MemberProfileStatus = {
+  active: 'active',
+  inactive: 'inactive',
+} as const;
+
+export interface MemberProfile {
+  id: string;
+  memberNumber: string;
+  fullName: string;
+  /** @nullable */
+  email: string | null;
+  phone: string;
+  status: MemberProfileStatus;
+  registeredAt: string;
+  qrToken: string;
+  membership: MemberMembership | null;
+  /** @minimum 0 */
+  checkInsThisMonth: number;
+}
+
+export interface MemberWorkoutExercise {
+  id: string;
+  position: number;
+  name: string;
+  sets: number;
+  /** @nullable */
+  repetitions: number | null;
+  /** @nullable */
+  durationSeconds: number | null;
+  /** @nullable */
+  restSeconds: number | null;
+}
+
+export interface MemberWorkoutExerciseLog {
+  exerciseId: string;
+  completed: boolean;
+  /**
+     * @minimum 0
+     * @maximum 1000
+     * @nullable
+     */
+  weightKg: number | null;
+  /**
+     * @minimum 0
+     * @maximum 1000
+     * @nullable
+     */
+  repsCompleted: number | null;
+  /**
+     * @minimum 0
+     * @maximum 86400
+     * @nullable
+     */
+  durationSecondsCompleted: number | null;
+}
+
+export type MemberWorkoutSessionInputExercisesItem = {
+  exerciseId: string;
+  completed: boolean;
+  /**
+     * @minimum 0
+     * @maximum 1000
+     * @nullable
+     */
+  weightKg?: number | null;
+  /**
+     * @minimum 0
+     * @maximum 1000
+     * @nullable
+     */
+  repsCompleted?: number | null;
+  /**
+     * @minimum 0
+     * @maximum 86400
+     * @nullable
+     */
+  durationSecondsCompleted?: number | null;
+};
+
+export interface MemberWorkoutSessionInput {
+  /**
+     * @minItems 1
+     * @maxItems 30
+     */
+  exercises: MemberWorkoutSessionInputExercisesItem[];
+}
+
+export type MemberWorkoutSessionStatus = typeof MemberWorkoutSessionStatus[keyof typeof MemberWorkoutSessionStatus];
+
+
+export const MemberWorkoutSessionStatus = {
+  in_progress: 'in_progress',
+  completed: 'completed',
+} as const;
+
+export interface MemberWorkoutSession {
+  id: string;
+  sessionDate: string;
+  status: MemberWorkoutSessionStatus;
+  exercises: MemberWorkoutExerciseLog[];
+  recordedAt: string;
+  /** @nullable */
+  completedAt: string | null;
+}
+
+export type MemberWorkoutStatus = typeof MemberWorkoutStatus[keyof typeof MemberWorkoutStatus];
+
+
+export const MemberWorkoutStatus = {
+  assigned: 'assigned',
+  in_progress: 'in_progress',
+  completed: 'completed',
+} as const;
+
+export interface MemberWorkout {
+  id: string;
+  programId: string;
+  programName: string;
+  goal: string;
+  /** @nullable */
+  description: string | null;
+  startsOn: string;
+  status: MemberWorkoutStatus;
+  /** @nullable */
+  notes: string | null;
+  recommendedDaysPerWeek: number;
+  expectedSessionMinutes: number;
+  exercises: MemberWorkoutExercise[];
+  sessions: MemberWorkoutSession[];
+}
+
+/**
+ * @nullable
+ */
+export type MemberEventRegistrationStatus = typeof MemberEventRegistrationStatus[keyof typeof MemberEventRegistrationStatus] | null;
+
+
+export const MemberEventRegistrationStatus = {
+  confirmed: 'confirmed',
+  cancelled: 'cancelled',
+} as const;
+
 export type EventStatus = typeof EventStatus[keyof typeof EventStatus];
 
 
@@ -642,6 +806,19 @@ export interface GymEvent {
   coverUrl: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export type MemberEvent = GymEvent & {
+  /** @nullable */
+  registrationStatus?: MemberEventRegistrationStatus;
+};
+
+export interface MemberProgress {
+  assessments: FitnessAssessmentHistoryItem[];
+  /** @minimum 0 */
+  checkInsThisMonth: number;
+  /** @minimum 0 */
+  workoutsThisMonth: number;
 }
 
 export interface DashboardSummary {

@@ -21,6 +21,7 @@ class Member(Base):
     __table_args__ = (
         Index("ix_members_full_name", "full_name"),
         Index("ix_members_registered_at", "registered_at"),
+        Index("uq_members_clerk_user_id", "clerk_user_id", unique=True),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -30,6 +31,7 @@ class Member(Base):
     full_name: Mapped[str] = mapped_column(String(160), nullable=False)
     phone: Mapped[str] = mapped_column(String(20), nullable=False, unique=True)
     email: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    clerk_user_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, default=MemberStatus.ACTIVE.value
     )

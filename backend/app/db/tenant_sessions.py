@@ -108,3 +108,40 @@ def resolve_tenant_session(request: Request) -> Session:
         raise
     except Exception:
         raise HTTPException(503, detail={"code": "gym_connection_unavailable", "error": "Unable to connect to the selected gym"}) from None
+
+
+def resolve_member_session(gym_id: str | None) -> Session:
+    """Resolve the member API's server-pinned gym without a client selection."""
+    from uuid import UUID
+
+    from backend.platform.app import GymTenant, platform_session_factory
+
+    unavailable = HTTPException(
+        503,
+        detail={
+            "code": "member_portal_unavailable",
+            "error": "Member access is not configured for its fixed gym",
+        },
+    )
+    if not gym_id:
+        raise unavailable
+    try:
+        fixed_gym_id = str(UUID(gym_id))
+        with platform_session_factory()() as registry:
+            gym = registry.get(GymTenant, fixed_gym_id)
+            if gym is None or gym.status != "active" or not gym.database_ref:
+                raise unavailable
+            if gym.environment_kind == "customer":
+                factory = tenant_factory(gym.database_ref)
+            elif (
+                gym.environment_kind in _EXISTING
+                and gym.database_ref == _EXISTING[gym.environment_kind]
+            ):
+                factory = existing_factory(gym.database_ref)
+            else:
+                raise unavailable
+        return factory()
+    except HTTPException:
+        raise unavailable from None
+    except Exception:
+        raise unavailable from None

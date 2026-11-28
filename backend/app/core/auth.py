@@ -1,17 +1,21 @@
 from __future__ import annotations
 
+from collections.abc import Generator
 from functools import lru_cache
 from typing import Any
 
 import jwt
 from fastapi import Depends, HTTPException, Request
 from jwt import PyJWKClient, PyJWKClientConnectionError, PyJWKClientError
-from sqlalchemy import select
+from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from backend.app.config import AppSettings, get_settings
 from backend.app.db.session import get_db
+from backend.app.models.member import Member, MemberStatus
 from backend.app.models.staff_user import StaffRole, StaffStatus, StaffUser
+from backend.app.services.clerk import get_verified_clerk_profile
 
 
 @lru_cache
@@ -79,7 +83,11 @@ def get_clerk_claims(
     authorized_party = claims.get("azp")
     if authorized_party:
         origin = _request_origin(request)
-        if not origin or authorized_party.rstrip("/") != origin:
+        party = authorized_party.rstrip("/")
+        if (
+            party != origin
+            and party not in settings.allowed_clerk_authorized_parties()
+        ):
             raise HTTPException(
                 status_code=401,
                 detail={"error": "Sign-in origin is not allowed", "code": "invalid_session_origin"},
@@ -92,6 +100,128 @@ def get_clerk_claims(
         )
 
     return claims
+
+
+def get_member_db(
+    claims: dict[str, Any] = Depends(get_clerk_claims),
+    settings: AppSettings = Depends(get_settings),
+) -> Generator[Session, None, None]:
+    """Open the one server-configured gym database for member-only routes."""
+    if not claims.get("sub"):
+        raise HTTPException(
+            status_code=401,
+            detail={"error": "Sign in to continue", "code": "authentication_required"},
+        )
+    from backend.app.db.tenant_sessions import resolve_member_session
+
+    session = resolve_member_session(settings.member_portal_gym_id)
+    try:
+        yield session
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+def get_current_member(
+    claims: dict[str, Any] = Depends(get_clerk_claims),
+    session: Session = Depends(get_member_db),
+    settings: AppSettings = Depends(get_settings),
+) -> Member:
+    """Resolve a Clerk session to one pre-registered member account.
+
+    On first sign-in, only a verified Clerk email that matches exactly one
+    staff-created member record can claim that record. The Clerk subject is
+    then stored so subsequent requests do not depend on a mutable email.
+    """
+    clerk_user_id = claims.get("sub")
+    if not isinstance(clerk_user_id, str) or not clerk_user_id:
+        raise HTTPException(
+            status_code=401,
+            detail={"error": "Sign in to continue", "code": "authentication_required"},
+        )
+
+    member = session.scalar(
+        select(Member).where(Member.clerk_user_id == clerk_user_id)
+    )
+    if member is None:
+        if not settings.clerk_secret_key:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "error": "Member account verification is not configured",
+                    "code": "member_verification_not_configured",
+                },
+            )
+
+        _, verified_emails = get_verified_clerk_profile(
+            clerk_user_id, settings.clerk_secret_key
+        )
+        if not verified_emails:
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "error": "Ask reception to match your verified sign-in email to your member record",
+                    "code": "member_account_unlinked",
+                },
+            )
+
+        matches = list(
+            session.scalars(
+                select(Member)
+                .where(func.lower(Member.email).in_(verified_emails))
+                .order_by(Member.id)
+                .limit(2)
+                .with_for_update()
+            )
+        )
+        if len(matches) != 1:
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "error": "Ask reception to match your verified sign-in email to one member record",
+                    "code": "member_account_unlinked",
+                },
+            )
+
+        member = matches[0]
+        if (
+            member.status != MemberStatus.ACTIVE.value
+            or (member.clerk_user_id and member.clerk_user_id != clerk_user_id)
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "error": "This member account is unavailable",
+                    "code": "member_access_unavailable",
+                },
+            )
+        member.clerk_user_id = clerk_user_id
+        try:
+            session.commit()
+        except IntegrityError:
+            session.rollback()
+            member = session.scalar(
+                select(Member).where(Member.clerk_user_id == clerk_user_id)
+            )
+            if member is None:
+                raise HTTPException(
+                    status_code=403,
+                    detail={
+                        "error": "This member account could not be linked",
+                        "code": "member_account_unlinked",
+                    },
+                ) from None
+        else:
+            session.refresh(member)
+
+    if member.status != MemberStatus.ACTIVE.value:
+        raise HTTPException(
+            status_code=403,
+            detail={"error": "This member account is inactive", "code": "member_inactive"},
+        )
+    return member
 
 
 def get_current_staff(

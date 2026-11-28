@@ -9,6 +9,7 @@ from backend.app.api.routes.member_directory_insights import router as member_di
 from backend.app.api.routes.operations import router as operations_router
 from backend.app.api.routes.onboarding import router as onboarding_router
 from backend.app.api.routes.member_workout_access import router as member_workout_access_router
+from backend.app.api.routes.member_portal import router as member_portal_router
 from backend.app.api.routes.staff import router as staff_router
 from backend.app.api.routes.workouts import router as workouts_router
 from backend.app.api.routes.workspaces import router as workspaces_router
@@ -26,3 +27,4 @@ api_router.include_router(onboarding_router)
 api_router.include_router(member_workout_access_router)
 api_router.include_router(workouts_router)
 api_router.include_router(events_router)
+api_router.include_router(member_portal_router)
